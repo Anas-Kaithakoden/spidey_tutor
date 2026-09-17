@@ -68,6 +68,29 @@ export interface ModelOption {
   label: string;
 }
 
+export interface StudyNoteSection {
+  heading: string;
+  content: string;
+  bullet_points: string[];
+}
+
+export interface StudyNoteKeyConcept {
+  term: string;
+  definition: string;
+}
+
+export interface StudyNotes {
+  id: number;
+  material_id: number;
+  title: string;
+  summary: string;
+  sections: StudyNoteSection[];
+  key_concepts: StudyNoteKeyConcept[];
+  generated_by: "ai" | "mock";
+  provider: string;
+  model_name: string;
+}
+
 export function getModels(): Promise<{ providers: ModelOption[] }> {
   return request<{ providers: ModelOption[] }>("/models");
 }
@@ -152,6 +175,23 @@ export function generateFlashcards(
   model_name: string
 ): Promise<FlashcardOut[]> {
   return request<FlashcardOut[]>("/flashcards", {
+    method: "POST",
+    body: JSON.stringify({ material_id: materialId, provider, model_name }),
+  });
+}
+
+export function getStudyNotes(
+  materialId: number
+): Promise<StudyNotes | null> {
+  return request<StudyNotes | null>(`/study-notes?material_id=${materialId}`);
+}
+
+export function generateStudyNotes(
+  materialId: number,
+  provider: string,
+  model_name: string
+): Promise<StudyNotes> {
+  return request<StudyNotes>("/study-notes", {
     method: "POST",
     body: JSON.stringify({ material_id: materialId, provider, model_name }),
   });

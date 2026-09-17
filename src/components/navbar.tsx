@@ -17,6 +17,9 @@ export function Navbar() {
           <Button render={<Link href="/add" />} variant="ghost" size="sm">
             Study
           </Button>
+          <Button render={<Link href="/notes" />} variant="ghost" size="sm">
+            Notes
+          </Button>
           <Button render={<Link href="/flashcards" />} variant="ghost" size="sm">
             Flashcards
           </Button>

@@ -160,6 +160,8 @@ All endpoints live under `/api`. From the frontend they are proxied automaticall
 | `POST` | `/api/quizzes/{id}/submit` | `{ answers: (int\|null)[], time_taken_seconds }` | Score + full review |
 | `GET` | `/api/flashcards?material_id={id}` | — | Saved flashcards for a material |
 | `POST` | `/api/flashcards` | `{ material_id, provider, model_name }` | Generate (and replace) flashcards |
+| `GET` | `/api/study-notes?material_id={id}` | — | Saved study notes for a material (`null` if none) |
+| `POST` | `/api/study-notes` | `{ material_id, provider, model_name }` | Generate (and replace) structured study notes |
 
 **Convention: request/response payloads are defined once in `backend/app/schemas.py` and typed once in `src/lib/api.ts`. When you add an endpoint, update both.**
 

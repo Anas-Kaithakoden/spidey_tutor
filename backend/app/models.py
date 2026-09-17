@@ -98,3 +98,20 @@ class Flashcard(Base):
     )
 
     material: Mapped[Material] = relationship(back_populates="flashcards")
+
+
+class StudyNote(Base):
+    __tablename__ = "study_notes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    material_id: Mapped[int] = mapped_column(ForeignKey("materials.id"))
+    title: Mapped[str] = mapped_column(String(255))
+    summary: Mapped[str] = mapped_column(Text, default="")
+    sections: Mapped[list] = mapped_column(JSON, default=list)
+    key_concepts: Mapped[list] = mapped_column(JSON, default=list)
+    generated_by: Mapped[str] = mapped_column(String(8), default="mock")
+    provider: Mapped[str] = mapped_column(String(16), default="gemini")
+    model_name: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow
+    )

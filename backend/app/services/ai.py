@@ -1,7 +1,7 @@
 import logging
 
 from app.config import settings
-from app.seed import MOCK_FLASHCARDS, MOCK_QUESTIONS
+from app.seed import MOCK_FLASHCARDS, MOCK_QUESTIONS, MOCK_STUDY_NOTES
 from app.services import gemini, ollama
 
 logger = logging.getLogger(__name__)
@@ -91,3 +91,75 @@ def generate_flashcards(
             provider, model_name, exc,
         )
         return "mock", [dict(c) for c in MOCK_FLASHCARDS[:count]]
+
+
+def _normalize_study_notes(item: dict) -> dict:
+    title = str(item.get("title", "Study Notes")).strip() or "Study Notes"
+    summary = str(item.get("summary", "")).strip()
+
+    sections = []
+    for s in item.get("sections", []):
+        if not isinstance(s, dict):
+            continue
+        heading = str(s.get("heading", "")).strip()
+        content = str(s.get("content", "")).strip()
+        bullet_points = [
+            str(b).strip()
+            for b in s.get("bullet_points", [])
+            if str(b).strip()
+        ]
+        if not heading and not content and not bullet_points:
+            continue
+        sections.append(
+            {
+                "heading": heading,
+                "content": content,
+                "bullet_points": bullet_points,
+            }
+        )
+
+    key_concepts = []
+    for kc in item.get("key_concepts", []):
+        if not isinstance(kc, dict):
+            continue
+        term = str(kc.get("term", "")).strip()
+        definition = str(kc.get("definition", "")).strip()
+        if term and definition:
+            key_concepts.append({"term": term, "definition": definition})
+
+    if not sections and not key_concepts:
+        raise ValueError("Invalid study notes")
+
+    return {
+        "title": title,
+        "summary": summary,
+        "sections": sections,
+        "key_concepts": key_concepts,
+    }
+
+
+def generate_study_notes(
+    material_text: str,
+    provider: str = "gemini",
+    model_name: str = "",
+) -> tuple[str, dict]:
+    """Generate study notes. Returns (generated_by, notes dict)."""
+    try:
+        if provider == "ollama":
+            name = model_name or "qwen3:8b"
+            raw = ollama.generate_study_notes(material_text, name)
+        elif provider == "gemini":
+            name = model_name or settings.gemini_model
+            raw = gemini.generate_study_notes_raw(material_text, name)
+        else:
+            raise ValueError(f"Unknown provider: {provider}")
+
+        notes = _normalize_study_notes(raw)
+        return "ai", notes
+
+    except Exception as exc:
+        logger.exception(
+            "Study notes generation failed (provider=%s, model=%s): %s",
+            provider, model_name, exc,
+        )
+        return "mock", dict(MOCK_STUDY_NOTES)
