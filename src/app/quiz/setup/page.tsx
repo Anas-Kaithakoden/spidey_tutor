@@ -55,6 +55,8 @@ export default function QuizSetup() {
         toast.info(
           "Using sample questions (add your Gemini API key for AI-generated ones)."
         );
+      } else if (quiz.generated_by === "quick") {
+        toast.info("Quick Mode: questions generated deterministically, no AI call.");
       }
       router.push("/quiz");
     } catch (err) {

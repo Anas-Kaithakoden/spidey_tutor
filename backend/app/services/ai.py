@@ -2,7 +2,7 @@ import logging
 
 from app.config import settings
 from app.seed import MOCK_FLASHCARDS, MOCK_QUESTIONS, MOCK_STUDY_NOTES
-from app.services import gemini, ollama
+from app.services import gemini, ollama, quick
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,13 @@ def generate_quiz(
 ) -> tuple[str, list[dict]]:
     """Generate quiz questions. Returns (generated_by, questions)."""
     try:
-        if provider == "ollama":
+        success_tag = "ai"
+        if provider == "quick":
+            raw = quick.generate_quiz(
+                material_text, difficulty, question_count
+            )
+            success_tag = "quick"
+        elif provider == "ollama":
             name = model_name or "qwen3:8b"
             raw = ollama.generate_quiz(material_text, difficulty, question_count, name)
         elif provider == "gemini":
@@ -53,7 +59,7 @@ def generate_quiz(
         questions = [_normalize_question(q) for q in raw]
         if not questions:
             raise ValueError("No questions generated")
-        return "ai", questions
+        return success_tag, questions
 
     except Exception as exc:
         logger.exception(
@@ -71,7 +77,11 @@ def generate_flashcards(
 ) -> tuple[str, list[dict]]:
     """Generate flashcards. Returns (generated_by, flashcards)."""
     try:
-        if provider == "ollama":
+        success_tag = "ai"
+        if provider == "quick":
+            raw = quick.generate_flashcards(material_text, count)
+            success_tag = "quick"
+        elif provider == "ollama":
             name = model_name or "qwen3:8b"
             raw = ollama.generate_flashcards(material_text, count, name)
         elif provider == "gemini":
@@ -83,7 +93,7 @@ def generate_flashcards(
         cards = [_normalize_flashcard(c) for c in raw]
         if not cards:
             raise ValueError("No flashcards generated")
-        return "ai", cards
+        return success_tag, cards
 
     except Exception as exc:
         logger.exception(
@@ -145,7 +155,11 @@ def generate_study_notes(
 ) -> tuple[str, dict]:
     """Generate study notes. Returns (generated_by, notes dict)."""
     try:
-        if provider == "ollama":
+        success_tag = "ai"
+        if provider == "quick":
+            raw = quick.generate_study_notes(material_text)
+            success_tag = "quick"
+        elif provider == "ollama":
             name = model_name or "qwen3:8b"
             raw = ollama.generate_study_notes(material_text, name)
         elif provider == "gemini":
@@ -155,7 +169,7 @@ def generate_study_notes(
             raise ValueError(f"Unknown provider: {provider}")
 
         notes = _normalize_study_notes(raw)
-        return "ai", notes
+        return success_tag, notes
 
     except Exception as exc:
         logger.exception(

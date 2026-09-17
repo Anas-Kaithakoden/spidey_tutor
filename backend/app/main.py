@@ -87,4 +87,13 @@ def list_models():
             ModelInfo(provider="ollama", name="qwen3:8b", label="Local (unreachable)")
         )
 
+    # Quick — deterministic local generation, always available, no API call
+    providers.append(
+        ModelInfo(
+            provider="quick",
+            name="quick",
+            label="Quick (deterministic, no AI)",
+        )
+    )
+
     return ModelsOut(providers=providers)
