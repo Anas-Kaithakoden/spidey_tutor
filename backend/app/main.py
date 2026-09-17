@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import Base, engine
 from app.models import Material  # noqa: F401 (ensure models are registered)
-from app.routers import flashcards, materials, quizzes
+from app.routers import flashcards, materials, quizzes, study_notes
 from app.schemas import HealthOut, ModelInfo, ModelsOut
 from app.services import ollama
 
@@ -45,6 +45,7 @@ app.add_middleware(
 app.include_router(materials.router)
 app.include_router(quizzes.router)
 app.include_router(flashcards.router)
+app.include_router(study_notes.router)
 
 
 @app.get("/api/health", response_model=HealthOut)

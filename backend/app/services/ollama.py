@@ -106,6 +106,31 @@ def generate_flashcards(
     return data.get("flashcards", [])[:count]
 
 
+def generate_study_notes(
+    material_text: str,
+    model_name: str,
+    max_material_chars: int = 40000,
+) -> dict:
+    truncated = material_text[:max_material_chars]
+
+    system = (
+        "You are a study notes generator for a study tool.\n"
+        "Create structured, student-friendly study notes from the material.\n"
+        "Rules:\n"
+        "- Base the notes ONLY on the provided material; do not invent unrelated information.\n"
+        "- Organize the content into logical topics/sections with clear headings.\n"
+        "- Keep explanations concise and clear.\n"
+        "- Use bullet points where listing facts, steps, or examples helps.\n"
+        "- Highlight the most important concepts and definitions in key_concepts.\n"
+        'Respond with STRICT JSON only matching: '
+        '{"title": string, "summary": string, '
+        '"sections": [{"heading": string, "content": string, "bullet_points": [string]}], '
+        '"key_concepts": [{"term": string, "definition": string}]}'
+    )
+    raw = _chat_json(model_name, system, f"Study material:\n{truncated}")
+    return _robust_parse(raw)
+
+
 def available_models() -> list[dict]:
     """Query Ollama for available models."""
     try:

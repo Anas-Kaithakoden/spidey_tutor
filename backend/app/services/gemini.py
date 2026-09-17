@@ -77,3 +77,34 @@ def generate_flashcards_raw(
     )
     data = json.loads(response.text)
     return data.get("flashcards", [])[:count]
+
+
+def generate_study_notes_raw(
+    material_text: str,
+    model_name: str,
+) -> dict:
+    """Call Gemini and return raw study-notes dict (no normalization)."""
+    prompt = (
+        "You are a study notes generator for a study tool.\n"
+        "Create structured, student-friendly study notes from the material.\n\n"
+        "Rules:\n"
+        "- Base the notes ONLY on the provided material; do not invent unrelated information.\n"
+        "- Organize the content into logical topics/sections with clear headings.\n"
+        "- Keep explanations concise and clear.\n"
+        "- Use bullet points where listing facts, steps, or examples helps.\n"
+        "- Highlight the most important concepts and definitions in key_concepts.\n\n"
+        "Respond with STRICT JSON only, matching this schema:\n"
+        '{"title": string, "summary": string, '
+        '"sections": [{"heading": string, "content": string, "bullet_points": [string]}], '
+        '"key_concepts": [{"term": string, "definition": string}]}\n\n'
+        f"Study material:\n{material_text[:40000]}"
+    )
+    response = _client().models.generate_content(
+        model=model_name,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            temperature=0.7,
+        ),
+    )
+    return json.loads(response.text)

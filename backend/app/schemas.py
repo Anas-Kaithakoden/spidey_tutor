@@ -84,6 +84,36 @@ class FlashcardOut(BaseModel):
     back: str
 
 
+class CreateStudyNotes(BaseModel):
+    material_id: int
+    provider: str = "gemini"
+    model_name: str = ""
+
+
+class StudyNoteSection(BaseModel):
+    heading: str
+    content: str
+    bullet_points: list[str] = []
+
+
+class StudyNoteKeyConcept(BaseModel):
+    term: str
+    definition: str
+
+
+class StudyNotesOut(BaseModel):
+    id: int
+    material_id: int
+    title: str
+    summary: str
+    sections: list[StudyNoteSection]
+    key_concepts: list[StudyNoteKeyConcept]
+    generated_by: str
+    provider: str
+    model_name: str
+    created_at: datetime
+
+
 class ModelInfo(BaseModel):
     provider: str
     name: str
