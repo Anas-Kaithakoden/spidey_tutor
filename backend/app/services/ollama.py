@@ -1,0 +1,121 @@
+import json
+import logging
+
+import httpx
+
+logger = logging.getLogger(__name__)
+
+OLLAMA_BASE_URL = "http://localhost:11434"
+REQUEST_TIMEOUT = 600
+
+
+def _chat_json(
+    model_name: str,
+    system: str,
+    user: str,
+    temperature: float = 0.7,
+) -> dict:
+    payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "stream": False,
+        "format": "json",
+        "options": {"temperature": temperature},
+    }
+    resp = httpx.post(
+        f"{OLLAMA_BASE_URL}/api/chat",
+        json=payload,
+        timeout=REQUEST_TIMEOUT,
+    )
+    resp.raise_for_status()
+    return resp.json()["message"]["content"]
+
+
+def _robust_parse(raw: str) -> dict:
+    """Try to extract JSON from text that may contain markdown fences etc."""
+    text = raw.strip()
+    # strip ```json fences
+    if text.startswith("```"):
+        lines = text.split("\n")
+        lines = [l for l in lines if not l.strip().startswith("```")]
+        text = "\n".join(lines)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    # find first { to last }
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end > start:
+        try:
+            return json.loads(text[start : end + 1])
+        except json.JSONDecodeError:
+            pass
+    raise ValueError(f"Could not parse JSON from LLM response: {text[:200]}")
+
+
+def generate_quiz(
+    material_text: str,
+    difficulty: str,
+    question_count: int,
+    model_name: str,
+    max_material_chars: int = 40000,
+) -> list[dict]:
+    truncated = material_text[:max_material_chars]
+
+    system = (
+        "You are a quiz generator for a study tool.\n"
+        f"Create exactly {question_count} multiple-choice questions.\n"
+        f"Difficulty: {difficulty}\n"
+        "Rules:\n"
+        "- Each question must have exactly 4 options, with exactly one correct answer.\n"
+        "- Keep language clear, simple, and accurate to the material.\n"
+        "- For \"easy\", test basic recall. For \"medium\", test understanding. For \"hard\", test analysis and application.\n"
+        "- Provide a short 1-2 sentence explanation for each answer.\n"
+        'Respond with STRICT JSON only matching: '
+        '{"questions": [{"question": string, "options": [string x4], '
+        '"correct_answer": int (index of the correct option), "explanation": string}]}'
+    )
+    raw = _chat_json(model_name, system, f"Study material:\n{truncated}")
+    data = _robust_parse(raw)
+    return data.get("questions", [])[:question_count]
+
+
+def generate_flashcards(
+    material_text: str,
+    count: int,
+    model_name: str,
+    max_material_chars: int = 40000,
+) -> list[dict]:
+    truncated = material_text[:max_material_chars]
+
+    system = (
+        "You are a study assistant.\n"
+        f"Create {count} flashcards covering the most important concepts, definitions, and facts.\n"
+        "Rules:\n"
+        "- Front: a concise question or prompt.\n"
+        "- Back: a clear answer or definition (1-3 sentences).\n"
+        'Respond with STRICT JSON only matching: '
+        '{"flashcards": [{"front": string, "back": string}]}'
+    )
+    raw = _chat_json(model_name, system, f"Study material:\n{truncated}")
+    data = _robust_parse(raw)
+    return data.get("flashcards", [])[:count]
+
+
+def available_models() -> list[dict]:
+    """Query Ollama for available models."""
+    try:
+        resp = httpx.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5)
+        resp.raise_for_status()
+        models = resp.json().get("models", [])
+        return [
+            {"provider": "ollama", "name": m["name"], "label": m["name"]}
+            for m in models
+        ]
+    except Exception:
+        logger.debug("Ollama unreachable")
+        return []

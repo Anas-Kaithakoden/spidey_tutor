@@ -1,0 +1,9 @@
+fastapi>=0.141
+uvicorn>=0.53
+pydantic>=2.13
+pydantic-settings>=2.15
+sqlalchemy>=2.0
+pymupdf>=1.28
+google-genai>=2.24
+python-multipart>=0.0.32
+python-dotenv>=1.2
