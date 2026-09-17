@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useStudy } from "@/lib/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { CheckCircle, XCircle, RotateCcw, CreditCard, Loader2 } from "lucide-react";
 import { generateFlashcards } from "@/lib/api";
 import { useState } from "react";
@@ -37,7 +38,12 @@ export default function QuizResults() {
     }
     setCreatingCards(true);
     try {
-      await generateFlashcards(material.id, model.provider, model.name);
+      const cards = await generateFlashcards(material.id, model.provider, model.name);
+      if (cards.length && cards[0].provider === "quick") {
+        toast.info("Quick Mode: flashcards generated deterministically, no AI call.");
+      } else if (cards[0]?.provider === "gemini" || cards[0]?.provider === "ollama") {
+        toast.success("Flashcards created!");
+      }
       if (generatedBy === "mock") {
         toast.info(
           "Using sample flashcards (add your Gemini API key for AI-generated ones)."
@@ -56,6 +62,11 @@ export default function QuizResults() {
       {/* Score */}
       <div className="mb-10 text-center">
         <h1 className="mb-2 text-2xl font-bold">Quiz Complete!</h1>
+        {generatedBy === "quick" && (
+          <Badge variant="secondary" className="mb-4">
+            Quick Mode — no AI call
+          </Badge>
+        )}
         <div className="mb-4 inline-flex size-28 items-center justify-center rounded-full border-4 border-primary">
           <span className="text-3xl font-bold">{percentage}%</span>
         </div>

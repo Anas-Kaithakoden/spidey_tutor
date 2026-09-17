@@ -10,7 +10,16 @@ router = APIRouter(prefix="/api/flashcards", tags=["flashcards"])
 
 
 def _to_out(cards: list[Flashcard]) -> list[FlashcardOut]:
-    return [FlashcardOut(id=c.id, front=c.front, back=c.back) for c in cards]
+    return [
+        FlashcardOut(
+            id=c.id,
+            front=c.front,
+            back=c.back,
+            provider=c.provider,
+            model_name=c.model_name,
+        )
+        for c in cards
+    ]
 
 
 @router.get("", response_model=list[FlashcardOut])

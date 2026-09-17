@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useStudy } from "@/lib/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   BookOpen,
   ListChecks,
@@ -66,6 +67,8 @@ export default function Notes() {
         toast.info(
           "Using sample notes (add your Gemini API key for AI-generated ones)."
         );
+      } else if (generated.generated_by === "quick") {
+        toast.info("Quick Mode: notes generated deterministically, no AI call.");
       } else {
         toast.success("Study notes generated!");
       }
@@ -140,7 +143,14 @@ export default function Notes() {
 
           <Card>
             <CardContent className="pt-2">
-              <h2 className="text-lg font-semibold">{notes.title}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold">{notes.title}</h2>
+                {notes.generated_by === "quick" && (
+                  <Badge variant="secondary" className="shrink-0">
+                    Quick Mode
+                  </Badge>
+                )}
+              </div>
               {notes.summary && (
                 <p className="mt-2 leading-relaxed text-muted-foreground">
                   {notes.summary}

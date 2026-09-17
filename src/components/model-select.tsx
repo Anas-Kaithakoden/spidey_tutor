@@ -48,7 +48,12 @@ export function ModelSelect({ className }: { className?: string }) {
         {!loading &&
           options.map((opt) => (
             <option key={`${opt.provider}:${opt.name}`} value={`${opt.provider}:${opt.name}`}>
-              {opt.provider === "ollama" ? "Local" : "Cloud"} — {opt.label}
+              {opt.provider === "quick"
+                ? "Quick"
+                : opt.provider === "ollama"
+                  ? "Local"
+                  : "Cloud"}{" "}
+              — {opt.label}
             </option>
           ))}
       </select>

@@ -189,6 +189,9 @@ Models come from two sources and are chosen **per session in the UI** (persisted
 |---|---|---|---|
 | `gemini` | `GEMINI_API_KEY` in `backend/.env` | `gemini-2.5-flash` (set `GEMINI_MODEL`) | Cloud |
 | `ollama` | Ollama running on `:11434` | anything pulled, e.g. `qwen3:8b` | Local, free, offline |
+| `quick` | nothing | `quick` | **Quick Mode** — deterministic local generation (no API call) |
+
+**Quick Mode:** pick "Quick (deterministic, no AI)" in the AI Model dropdown. Generation runs server-side with pure Python (term frequency + sentence analysis) — cloze quizzes, term-definition flashcards, and sectioned study notes — always drawn from the uploaded material. The same input + configuration always produces the same output, never hits an external API, and responses are stamped `generated_by: "quick"` so the UI can badge them separately from LLM (`"ai"`) and mock-fallback (`"mock"`) content.
 
 Generation flow:
 

@@ -82,6 +82,8 @@ class FlashcardOut(BaseModel):
     id: int
     front: str
     back: str
+    provider: str
+    model_name: str
 
 
 class CreateStudyNotes(BaseModel):

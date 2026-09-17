@@ -22,7 +22,7 @@ export interface Quiz {
   question_count: number;
   timer_enabled: boolean;
   timer_minutes: number;
-  generated_by: "ai" | "mock";
+  generated_by: "ai" | "mock" | "quick";
   questions: QuizQuestionBrief[];
 }
 
@@ -42,7 +42,7 @@ export interface QuizResult {
   total: number;
   percentage: number;
   answers: (number | null)[];
-  generated_by: "ai" | "mock";
+  generated_by: "ai" | "mock" | "quick";
   reviews: QuestionReview[];
 }
 
@@ -50,6 +50,8 @@ export interface FlashcardOut {
   id: number;
   front: string;
   back: string;
+  provider: string;
+  model_name: string;
 }
 
 export interface CreateQuizPayload {
@@ -86,7 +88,7 @@ export interface StudyNotes {
   summary: string;
   sections: StudyNoteSection[];
   key_concepts: StudyNoteKeyConcept[];
-  generated_by: "ai" | "mock";
+  generated_by: "ai" | "mock" | "quick";
   provider: string;
   model_name: string;
 }
