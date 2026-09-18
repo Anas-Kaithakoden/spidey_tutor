@@ -254,3 +254,44 @@ export function reviewFlashcard(
     { method: "POST" }
   );
 }
+
+export interface ChatMessage {
+  id: number;
+  material_id: number;
+  role: "user" | "assistant";
+  content: string;
+  generated_by: string;
+  created_at: string;
+}
+
+export interface ChatReply {
+  user_message: ChatMessage;
+  assistant_message: ChatMessage;
+}
+
+export function getChatMessages(materialId: number): Promise<ChatMessage[]> {
+  return request<ChatMessage[]>(`/chat?material_id=${materialId}`);
+}
+
+export function sendChatMessage(
+  materialId: number,
+  content: string,
+  provider: string,
+  model_name: string
+): Promise<ChatReply> {
+  return request<ChatReply>("/chat", {
+    method: "POST",
+    body: JSON.stringify({
+      material_id: materialId,
+      content,
+      provider,
+      model_name,
+    }),
+  });
+}
+
+export function clearChat(materialId: number): Promise<void> {
+  return request<void>(`/chat?material_id=${materialId}`, {
+    method: "DELETE",
+  });
+}

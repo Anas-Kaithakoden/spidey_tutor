@@ -23,6 +23,9 @@ export function Navbar() {
           <Button render={<Link href="/flashcards" />} variant="ghost" size="sm">
             Flashcards
           </Button>
+          <Button render={<Link href="/chat" />} variant="ghost" size="sm">
+            Chat
+          </Button>
           <Button render={<Link href="/progress" />} variant="ghost" size="sm">
             Progress
           </Button>

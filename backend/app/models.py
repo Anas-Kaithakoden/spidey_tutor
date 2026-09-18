@@ -23,6 +23,9 @@ class Material(Base):
     flashcards: Mapped[list["Flashcard"]] = relationship(
         back_populates="material", cascade="all, delete-orphan"
     )
+    chat_messages: Mapped[list["ChatMessage"]] = relationship(
+        back_populates="material", cascade="all, delete-orphan"
+    )
 
 
 class Quiz(Base):
@@ -116,3 +119,18 @@ class StudyNote(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow
     )
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    material_id: Mapped[int] = mapped_column(ForeignKey("materials.id"))
+    role: Mapped[str] = mapped_column(String(16))
+    content: Mapped[str] = mapped_column(Text)
+    generated_by: Mapped[str] = mapped_column(String(8), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow
+    )
+
+    material: Mapped[Material] = relationship(back_populates="chat_messages")

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class CreateMaterial(BaseModel):
@@ -178,3 +178,32 @@ class AnalyticsOut(BaseModel):
     topics: list[TopicPerformance]
     score_trend: list[ScoreTrendPoint]
     recent_activity: list[RecentActivity]
+
+
+class ChatMessageOut(BaseModel):
+    id: int
+    material_id: int
+    role: str
+    content: str
+    generated_by: str
+    created_at: datetime
+
+
+class CreateChatMessage(BaseModel):
+    material_id: int
+    content: str = Field(min_length=1, max_length=4000)
+    provider: str = "gemini"
+    model_name: str = ""
+
+    @field_validator("content")
+    @classmethod
+    def content_not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Message cannot be blank.")
+        return v
+
+
+class ChatReplyOut(BaseModel):
+    user_message: ChatMessageOut
+    assistant_message: ChatMessageOut

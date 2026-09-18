@@ -108,3 +108,40 @@ def generate_study_notes_raw(
         ),
     )
     return json.loads(response.text)
+
+
+def generate_chat_reply_raw(
+    material_text: str,
+    history: list[dict],
+    model_name: str,
+) -> str:
+    """Call Gemini and return a grounded answer to the last user message.
+
+    ``history`` is the conversation so far (oldest first, ending with the
+    current user question) as ``{"role": ..., "content": ...}`` dicts.
+    """
+    prompt = (
+        "You are a study assistant that answers questions strictly based "
+        "ONLY on the uploaded study material provided below.\n\n"
+        "Rules:\n"
+        "- Answer ONLY from the study material. Do not use outside or "
+        "general knowledge as if it came from the material.\n"
+        "- If the material does not contain enough information to answer, "
+        "say clearly that the answer is not available in the uploaded "
+        "material — never invent an answer.\n"
+        "- Follow-up questions may refer back to earlier messages or to the "
+        "material.\n"
+        "- Keep answers concise, clear, and in the same language as the "
+        "question.\n\n"
+        "Conversation so far (newest last):\n"
+    )
+    for m in history:
+        prompt += f"{m['role']}: {m['content']}\n"
+    prompt += f"\nStudy material:\n{material_text[:40000]}"
+
+    response = _client().models.generate_content(
+        model=model_name,
+        contents=prompt,
+        config=types.GenerateContentConfig(temperature=0.3),
+    )
+    return response.text.strip()

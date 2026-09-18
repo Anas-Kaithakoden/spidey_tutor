@@ -131,6 +131,64 @@ def generate_study_notes(
     return _robust_parse(raw)
 
 
+def _chat_text(
+    model_name: str,
+    system: str,
+    user: str,
+    temperature: float = 0.3,
+) -> str:
+    """Free-form chat completion (no forced JSON format)."""
+    payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        "stream": False,
+        "options": {"temperature": temperature},
+    }
+    resp = httpx.post(
+        f"{OLLAMA_BASE_URL}/api/chat",
+        json=payload,
+        timeout=REQUEST_TIMEOUT,
+    )
+    resp.raise_for_status()
+    return str(resp.json()["message"]["content"]).strip()
+
+
+def generate_chat_reply(
+    material_text: str,
+    history: list[dict],
+    model_name: str,
+    max_material_chars: int = 40000,
+) -> str:
+    """Answer the last user message, grounded in the study material."""
+    truncated = material_text[:max_material_chars]
+
+    system = (
+        "You are a study assistant that answers questions strictly based "
+        "ONLY on the uploaded study material provided to you.\n"
+        "Rules:\n"
+        "- Answer ONLY from the study material. Do not use outside or "
+        "general knowledge as if it came from the material.\n"
+        "- If the material does not contain enough information to answer, "
+        "say clearly that the answer is not available in the uploaded "
+        "material — never invent an answer.\n"
+        "- Follow-up questions may refer back to earlier messages or to the "
+        "material.\n"
+        "- Keep answers concise and clear.\n"
+    )
+    conversation = "\n".join(
+        f"{m['role']}: {m['content']}" for m in history
+    )
+    return _chat_text(
+        model_name,
+        system,
+        f"Conversation so far (newest last):\n{conversation}\n\n"
+        f"Study material:\n{truncated}",
+    )
+
+
 def available_models() -> list[dict]:
     """Query Ollama for available models."""
     try:
