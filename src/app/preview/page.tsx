@@ -6,7 +6,7 @@ import { useStudy } from "@/lib/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, FileText, Loader2, NotebookPen, Type } from "lucide-react";
+import { ArrowRight, FileText, Loader2, MessageCircle, NotebookPen, Type } from "lucide-react";
 
 export default function Preview() {
   const router = useRouter();
@@ -68,7 +68,15 @@ export default function Preview() {
         </CardContent>
       </Card>
 
-      <div className="mt-6 flex justify-between gap-3">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <Button
+          variant="outline"
+          onClick={() => router.push("/chat")}
+          className="gap-2"
+        >
+          <MessageCircle className="size-4" />
+          Chat
+        </Button>
         <Button
           variant="outline"
           onClick={() => router.push("/notes")}

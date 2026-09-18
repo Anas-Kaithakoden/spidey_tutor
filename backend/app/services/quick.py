@@ -67,6 +67,24 @@ def _sentence_with(sentences: list[str], term: str) -> str | None:
     return None
 
 
+_INFLECT_SUFFIXES = ("s", "es", "ed", "d", "ing")
+
+
+def _term_matches_sentence(sentence: str, term: str) -> bool:
+    """Match a term as a word, or a common inflection of it (e.g. add ~ adds).
+
+    Used by the deterministic chat reply so follow-up questions can resolve
+    short-term inflections without reaching outside the material. The check
+    is deliberately narrow (whole suffix words only) so "add" matches "adds"
+    but not "addresses".
+    """
+    if _contains_term(sentence, term):
+        return True
+    if len(term) < 3:
+        return False
+    return any(_contains_term(sentence, term + suffix) for suffix in _INFLECT_SUFFIXES)
+
+
 def _pairs(
     sentences: list[str], ranked: list[str]
 ) -> list[tuple[str, str]]:
@@ -202,3 +220,74 @@ def generate_study_notes(material_text: str) -> dict:
         "sections": sections,
         "key_concepts": key_concepts,
     }
+
+
+def generate_chat_reply(
+    material_text: str,
+    history: list[dict] | None = None,
+    max_answer_chars: int = 600,
+) -> str:
+    """Deterministically answer a question using only the material text.
+
+    ``history`` is the conversation so far (oldest first, ending with the
+    current user question) as ``{"role": ..., "content": ...}`` dicts. The
+    current question drives the keyword match; earlier user turns only provide
+    context when the latest question has no keywords (e.g. a pronoun follow-up
+    like "What about that?"). If nothing in the material matches, the answer
+    says the information is not in the uploaded material — it never invents
+    content that is not there.
+    """
+    history = history or []
+
+    if not material_text.strip():
+        return (
+            "There is no study material uploaded yet, so I can't answer from "
+            "it. Add a material first."
+        )
+
+    user_msgs = [
+        m["content"] for m in history if m.get("role") == "user"
+    ]
+    if not user_msgs:
+        return "Please ask a question about the uploaded material."
+
+    def _keywords(text: str) -> list[str]:
+        return list(
+            dict.fromkeys(
+                w for w in _tokens(text) if w not in _STOPWORDS and len(w) > 2
+            )
+        )
+
+    question = user_msgs[-1].strip()
+    primary = _keywords(question)
+    if not primary:
+        for q in reversed(user_msgs[:-1]):
+            primary = _keywords(q)
+            if primary:
+                break
+
+    if not primary:
+        return (
+            f"The uploaded material doesn't contain enough information to "
+            f"answer \"{question}\". Try asking about a specific concept, "
+            "term, or section in the notes."
+        )
+
+    sentences = _split_sentences(material_text)
+    scored = [
+        (sum(1 for k in primary if _term_matches_sentence(s, k)), s)
+        for s in sentences
+    ]
+    scored.sort(key=lambda item: item[0], reverse=True)
+
+    if not scored or scored[0][0] == 0:
+        return (
+            f"The uploaded material doesn't contain enough information to "
+            f"answer \"{question}\". Try asking about something that is "
+            "covered in the notes."
+        )
+
+    answer = scored[0][1]
+    if len(answer) > max_answer_chars:
+        answer = answer[:max_answer_chars].rsplit(" ", 1)[0] + "..."
+    return answer

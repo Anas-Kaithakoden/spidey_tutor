@@ -177,3 +177,47 @@ def generate_study_notes(
             provider, model_name, exc,
         )
         return "mock", dict(MOCK_STUDY_NOTES)
+
+
+def generate_chat_reply(
+    material_text: str,
+    history: list[dict],
+    provider: str = "gemini",
+    model_name: str = "",
+) -> tuple[str, str]:
+    """Generate a chat reply grounded in the material.
+
+    ``history`` is the conversation so far (oldest first, ending with the
+    current user question) as ``{"role": ..., "content": ...}`` dicts.
+    Returns (generated_by, reply_text).
+
+    The fallback deliberately reuses ``quick.generate_chat_reply`` (rather
+    than generic ``seed.py`` content): a chat answer about a specific upload
+    must never surface unrelated general knowledge as if it came from the
+    material, so even mock replies stay grounded in the text.
+    """
+    try:
+        success_tag = "ai"
+        if provider == "quick":
+            raw = quick.generate_chat_reply(material_text, history)
+            success_tag = "quick"
+        elif provider == "ollama":
+            name = model_name or "qwen3:8b"
+            raw = ollama.generate_chat_reply(material_text, history, name)
+        elif provider == "gemini":
+            name = model_name or settings.gemini_model
+            raw = gemini.generate_chat_reply_raw(material_text, history, name)
+        else:
+            raise ValueError(f"Unknown provider: {provider}")
+
+        reply = str(raw).strip()
+        if not reply:
+            raise ValueError("Empty chat reply")
+        return success_tag, reply
+
+    except Exception as exc:
+        logger.exception(
+            "Chat reply generation failed (provider=%s, model=%s): %s",
+            provider, model_name, exc,
+        )
+        return "mock", quick.generate_chat_reply(material_text, history)
