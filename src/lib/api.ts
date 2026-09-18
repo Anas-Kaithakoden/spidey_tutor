@@ -156,3 +156,32 @@ export function generateFlashcards(
     body: JSON.stringify({ material_id: materialId, provider, model_name }),
   });
 }
+
+export interface AudioSummaryOut {
+  material_id: number;
+  summary_text: string;
+  audio_base64: string;
+  mime_type: string;
+  generated_by: "ai" | "mock";
+  provider: string;
+  model_name: string;
+}
+
+export function generateAudioSummary(
+  materialId: number,
+  provider: string,
+  model_name: string,
+  voice_name: string = "Kore",
+  language: string = "en"
+): Promise<AudioSummaryOut> {
+  return request<AudioSummaryOut>("/audio/summary", {
+    method: "POST",
+    body: JSON.stringify({
+      material_id: materialId,
+      provider,
+      model_name,
+      voice_name,
+      language,
+    }),
+  });
+}

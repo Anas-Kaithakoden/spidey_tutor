@@ -98,3 +98,21 @@ class HealthOut(BaseModel):
     status: str
     gemini_configured: bool
     database: str
+
+
+class CreateAudioSummary(BaseModel):
+    material_id: int
+    provider: str = "gemini"
+    model_name: str = ""
+    voice_name: str = "Kore"
+    language: str = "en"
+
+
+class AudioSummaryOut(BaseModel):
+    material_id: int
+    summary_text: str
+    audio_base64: str
+    mime_type: str
+    generated_by: str
+    provider: str
+    model_name: str
