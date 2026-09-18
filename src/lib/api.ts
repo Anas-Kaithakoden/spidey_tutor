@@ -198,3 +198,59 @@ export function generateStudyNotes(
     body: JSON.stringify({ material_id: materialId, provider, model_name }),
   });
 }
+
+export interface TopicPerformance {
+  material_id: number;
+  title: string;
+  quizzes_taken: number;
+  questions_answered: number;
+  correct: number;
+  average_score: number;
+  needs_practice: boolean;
+}
+
+export interface RecentActivity {
+  kind: "quiz" | "flashcards" | "material" | "notes";
+  title: string;
+  detail: string;
+  material_id: number | null;
+  created_at: string;
+}
+
+export interface ScoreTrendPoint {
+  label: string;
+  score: number;
+  created_at: string;
+  material_title: string;
+}
+
+export interface Analytics {
+  has_activity: boolean;
+  materials: number;
+  quizzes_completed: number;
+  questions_answered: number;
+  correct_answers: number;
+  incorrect_answers: number;
+  average_score: number;
+  best_score: number | null;
+  flashcards: number;
+  flashcards_reviewed: number;
+  study_sessions: number;
+  days_studied: number;
+  topics: TopicPerformance[];
+  score_trend: ScoreTrendPoint[];
+  recent_activity: RecentActivity[];
+}
+
+export function getAnalytics(): Promise<Analytics> {
+  return request<Analytics>("/analytics");
+}
+
+export function reviewFlashcard(
+  cardId: number
+): Promise<{ id: number; review_count: number }> {
+  return request<{ id: number; review_count: number }>(
+    `/flashcards/${cardId}/review`,
+    { method: "POST" }
+  );
+}

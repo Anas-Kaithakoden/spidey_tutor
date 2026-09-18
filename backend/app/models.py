@@ -96,6 +96,7 @@ class Flashcard(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow
     )
+    review_count: Mapped[int] = mapped_column(Integer, default=0)
 
     material: Mapped[Material] = relationship(back_populates="flashcards")
 

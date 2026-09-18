@@ -130,3 +130,51 @@ class HealthOut(BaseModel):
     status: str
     gemini_configured: bool
     database: str
+
+
+class FlashcardReviewOut(BaseModel):
+    id: int
+    review_count: int
+
+
+class TopicPerformance(BaseModel):
+    material_id: int
+    title: str
+    quizzes_taken: int
+    questions_answered: int
+    correct: int
+    average_score: int
+    needs_practice: bool
+
+
+class RecentActivity(BaseModel):
+    kind: str
+    title: str
+    detail: str
+    material_id: int | None
+    created_at: datetime
+
+
+class ScoreTrendPoint(BaseModel):
+    label: str
+    score: int
+    created_at: datetime
+    material_title: str
+
+
+class AnalyticsOut(BaseModel):
+    has_activity: bool
+    materials: int
+    quizzes_completed: int
+    questions_answered: int
+    correct_answers: int
+    incorrect_answers: int
+    average_score: int
+    best_score: int | None
+    flashcards: int
+    flashcards_reviewed: int
+    study_sessions: int
+    days_studied: int
+    topics: list[TopicPerformance]
+    score_trend: list[ScoreTrendPoint]
+    recent_activity: list[RecentActivity]

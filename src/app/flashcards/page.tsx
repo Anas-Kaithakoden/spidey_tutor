@@ -17,6 +17,7 @@ import {
 import {
   generateFlashcards,
   getFlashcards,
+  reviewFlashcard,
   type FlashcardOut,
 } from "@/lib/api";
 import { ModelSelect } from "@/components/model-select";
@@ -144,7 +145,14 @@ export default function Flashcards() {
         <>
           {/* Card */}
           <div
-            onClick={() => setFlipped(!flipped)}
+            onClick={() => {
+              if (!flipped) {
+                reviewFlashcard(card.id).catch(() => {
+                  // tracking is best-effort; never block the review flow
+                });
+              }
+              setFlipped(!flipped);
+            }}
             className="mb-8 cursor-pointer"
             style={{ perspective: "1000px" }}
           >
