@@ -1,0 +1,4 @@
+# graphify: extra ignore rules merged with .gitignore (evaluated last, so they win on conflicts)
+
+# never re-ingest graphify's own outputs
+/graphify-out/
