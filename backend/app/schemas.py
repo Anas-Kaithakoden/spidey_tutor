@@ -225,3 +225,49 @@ class CreateChatMessage(BaseModel):
 class ChatReplyOut(BaseModel):
     user_message: ChatMessageOut
     assistant_message: ChatMessageOut
+
+
+class CreateStudyPlan(BaseModel):
+    syllabus: str | None = None
+    material_id: int | None = None
+    exam_date: str = Field(description="ISO date YYYY-MM-DD")
+    daily_hours: int = Field(default=3, ge=1, le=12)
+    provider: str = "gemini"
+    model_name: str = ""
+    language: str = "en"
+
+    @field_validator("exam_date")
+    @classmethod
+    def validate_date(cls, v: str) -> str:
+        from datetime import date
+
+        try:
+            d = date.fromisoformat(v)
+        except Exception:
+            raise ValueError("exam_date must be YYYY-MM-DD")
+        if d <= date.today():
+            raise ValueError("exam_date must be a future date")
+        return v
+
+
+class StudyPlanDay(BaseModel):
+    day: int
+    date: str
+    topic: str
+    tasks: list[str]
+    focus: str
+    duration_hours: float
+    revision: bool = False
+
+
+class StudyPlanOut(BaseModel):
+    exam_date: str
+    days_left: int
+    daily_hours: int
+    total_topics: int
+    plan: list[StudyPlanDay]
+    tips: list[str]
+    generated_by: str
+    provider: str
+    model_name: str
+    language: str

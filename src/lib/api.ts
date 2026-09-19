@@ -342,3 +342,41 @@ export function clearChat(materialId: number): Promise<void> {
     method: "DELETE",
   });
 }
+
+export interface StudyPlanDay {
+  day: number;
+  date: string;
+  topic: string;
+  tasks: string[];
+  focus: string;
+  duration_hours: number;
+  revision: boolean;
+}
+
+export interface StudyPlan {
+  exam_date: string;
+  days_left: number;
+  daily_hours: number;
+  total_topics: number;
+  plan: StudyPlanDay[];
+  tips: string[];
+  generated_by: "ai" | "mock" | "quick";
+  provider: string;
+  model_name: string;
+  language: string;
+}
+
+export function generateStudyPlan(payload: {
+  syllabus?: string;
+  material_id?: number;
+  exam_date: string;
+  daily_hours?: number;
+  provider: string;
+  model_name: string;
+  language?: string;
+}): Promise<StudyPlan> {
+  return request<StudyPlan>("/study-plan", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}

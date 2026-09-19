@@ -29,6 +29,9 @@ export function Navbar() {
           <Button render={<Link href="/progress" />} variant="ghost" size="sm" nativeButton={false}>
             Progress
           </Button>
+          <Button render={<Link href="/study-plan" />} variant="ghost" size="sm" nativeButton={false}>
+            Plan
+          </Button>
           <ThemeToggle />
         </nav>
       </div>
