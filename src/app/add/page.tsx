@@ -118,7 +118,7 @@ export default function AddMaterial() {
       <Card>
         <CardContent className="pt-6">
           {tab === "text" ? (
-            <div className="space-y-3">
+            <div key="text" className="space-y-3">
               <Label htmlFor="material-title">
                 Title <span className="text-muted-foreground">(optional)</span>
               </Label>
@@ -144,7 +144,7 @@ export default function AddMaterial() {
               )}
             </div>
           ) : tab === "pdf" ? (
-            <div className="space-y-4">
+            <div key="pdf" className="space-y-4">
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border-2 border-dashed p-12 text-center transition-colors hover:border-primary/50 hover:bg-muted/50"
@@ -178,7 +178,7 @@ export default function AddMaterial() {
               />
             </div>
           ) : tab === "image" ? (
-            <div className="space-y-4">
+            <div key="image" className="space-y-4">
               <div
                 onClick={() => imageInputRef.current?.click()}
                 className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border-2 border-dashed p-12 text-center transition-colors hover:border-primary/50 hover:bg-muted/50"
@@ -212,7 +212,7 @@ export default function AddMaterial() {
               />
             </div>
           ) : (
-            <div className="space-y-4">
+            <div key="office" className="space-y-4">
               <div
                 onClick={() => officeInputRef.current?.click()}
                 className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border-2 border-dashed p-12 text-center transition-colors hover:border-primary/50 hover:bg-muted/50"
