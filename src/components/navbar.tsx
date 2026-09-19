@@ -14,19 +14,19 @@ export function Navbar() {
           <span className="hidden sm:inline">Spidey Tutor</span>
         </Link>
         <nav className="flex flex-wrap items-center justify-end gap-1">
-          <Button render={<Link href="/add" />} variant="ghost" size="sm">
+          <Button render={<Link href="/add" />} variant="ghost" size="sm" nativeButton={false}>
             Study
           </Button>
-          <Button render={<Link href="/notes" />} variant="ghost" size="sm">
+          <Button render={<Link href="/notes" />} variant="ghost" size="sm" nativeButton={false}>
             Notes
           </Button>
-          <Button render={<Link href="/flashcards" />} variant="ghost" size="sm">
+          <Button render={<Link href="/flashcards" />} variant="ghost" size="sm" nativeButton={false}>
             Flashcards
           </Button>
-          <Button render={<Link href="/chat" />} variant="ghost" size="sm">
+          <Button render={<Link href="/chat" />} variant="ghost" size="sm" nativeButton={false}>
             Chat
           </Button>
-          <Button render={<Link href="/progress" />} variant="ghost" size="sm">
+          <Button render={<Link href="/progress" />} variant="ghost" size="sm" nativeButton={false}>
             Progress
           </Button>
           <ThemeToggle />

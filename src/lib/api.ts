@@ -4,7 +4,7 @@ export interface Material {
   id: number;
   title: string;
   content: string;
-  source_type: "text" | "pdf";
+  source_type: "text" | "pdf" | "image" | "docx" | "pptx" | "xlsx" | "office";
   char_count: number;
   word_count: number;
 }
@@ -142,6 +142,24 @@ export function uploadPdf(file: File): Promise<Material> {
   const form = new FormData();
   form.append("file", file);
   return request<Material>("/materials/pdf", {
+    method: "POST",
+    body: form,
+  });
+}
+
+export function uploadImage(file: File): Promise<Material> {
+  const form = new FormData();
+  form.append("file", file);
+  return request<Material>("/materials/image", {
+    method: "POST",
+    body: form,
+  });
+}
+
+export function uploadOffice(file: File): Promise<Material> {
+  const form = new FormData();
+  form.append("file", file);
+  return request<Material>("/materials/office", {
     method: "POST",
     body: form,
   });

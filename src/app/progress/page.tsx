@@ -98,7 +98,7 @@ export default function ProgressDashboard() {
               and stats will show up here.
             </p>
           </div>
-          <Button render={<Link href="/add" />} className="gap-2">
+          <Button render={<Link href="/add" />} className="gap-2" nativeButton={false}>
             <GraduationCap className="size-4" />
             Start Studying
           </Button>
@@ -311,6 +311,7 @@ function TopicRow({ topic }: { topic: Analytics["topics"][number] }) {
             variant="outline"
             size="sm"
             className="gap-1"
+            nativeButton={false}
           >
             <RotateCcw className="size-3.5" />
             Practice
