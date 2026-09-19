@@ -11,14 +11,23 @@ interface ModelOption {
 
 function loadModel(): ModelOption {
   if (typeof window === "undefined")
-    return { provider: "gemini", name: "gemini-2.5-flash", label: "Gemini" };
+    return { provider: "gemini", name: "gemini-3-flash-preview", label: "Gemini" };
   try {
     const raw = localStorage.getItem("spidey-model");
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const m = JSON.parse(raw);
+      // auto-migrate old deprecated model
+      if (m.name === "gemini-2.5-flash" || m.name === "gemini-2.0-flash" || m.name === "gemini-2.5-flash-lite") {
+        m.name = "gemini-3-flash-preview";
+        m.label = "Gemini";
+        localStorage.setItem("spidey-model", JSON.stringify(m));
+      }
+      return m;
+    }
   } catch {
     // fall through
   }
-  return { provider: "gemini", name: "gemini-2.5-flash", label: "Gemini" };
+  return { provider: "gemini", name: "gemini-3-flash-preview", label: "Gemini" };
 }
 
 function saveModel(m: ModelOption) {

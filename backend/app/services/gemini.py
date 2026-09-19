@@ -9,6 +9,40 @@ logger = logging.getLogger(__name__)
 _client_instance: genai.Client | None = None
 
 
+def _robust_json_loads(text: str) -> dict:
+    """Parse JSON even with markdown fences and trailing commas."""
+    import re
+
+    t = text.strip()
+    if t.startswith("```"):
+        lines = [l for l in t.split("\n") if not l.strip().startswith("```")]
+        t = "\n".join(lines).strip()
+    # try direct
+    try:
+        return json.loads(t)
+    except json.JSONDecodeError:
+        pass
+    # remove trailing commas before } or ]
+    t2 = re.sub(r",\s*}", "}", t)
+    t2 = re.sub(r",\s*]", "]", t2)
+    try:
+        return json.loads(t2)
+    except json.JSONDecodeError:
+        pass
+    # find first { to last }
+    s = t.find("{")
+    e = t.rfind("}")
+    if s != -1 and e > s:
+        snippet = t[s : e + 1]
+        snippet = re.sub(r",\s*}", "}", snippet)
+        snippet = re.sub(r",\s*]", "]", snippet)
+        try:
+            return json.loads(snippet)
+        except json.JSONDecodeError:
+            pass
+    raise ValueError(f"Could not parse JSON: {text[:400]}")
+
+
 def _client() -> genai.Client:
     from app.config import settings
 
@@ -63,7 +97,7 @@ def generate_quiz_raw(
             temperature=0.7,
         ),
     )
-    data = json.loads(response.text)
+    data = _robust_json_loads(response.text)
     return data.get("questions", [])[:question_count]
 
 
@@ -91,7 +125,7 @@ def generate_flashcards_raw(
             temperature=0.7,
         ),
     )
-    data = json.loads(response.text)
+    data = _robust_json_loads(response.text)
     return data.get("flashcards", [])[:count]
 
 
@@ -123,7 +157,7 @@ def generate_study_notes_raw(
             temperature=0.7,
         ),
     )
-    return json.loads(response.text)
+    return _robust_json_loads(response.text)
 
 
 def generate_chat_reply_raw(
