@@ -32,6 +32,10 @@ export default function StudyPlanPage() {
       toast.error("Pick an exam date.");
       return;
     }
+    if (new Date(examDate) < new Date(new Date().setHours(0, 0, 0, 0))) {
+      toast.error("Exam date cannot be in the past. Pick a future date.");
+      return;
+    }
     setLoading(true);
     try {
       const res = await generateStudyPlan({
@@ -53,7 +57,16 @@ export default function StudyPlanPage() {
     }
   }
 
+  const tomorrow = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  })();
   const daysLeft = examDate ? Math.ceil((new Date(examDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 0;
+  const isPast = examDate ? new Date(examDate) < new Date(new Date().setHours(0, 0, 0, 0)) : false;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
@@ -89,8 +102,16 @@ export default function StudyPlanPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="exam-date">Exam date</Label>
-              <Input id="exam-date" type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} className="mt-2" min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)} />
-              {daysLeft > 0 && <p className="mt-1 text-xs text-muted-foreground">{daysLeft} days left</p>}
+              <Input
+                id="exam-date"
+                type="date"
+                value={examDate}
+                onChange={(e) => setExamDate(e.target.value)}
+                className="mt-2"
+                min={tomorrow}
+              />
+              {isPast && <p className="mt-1 text-xs text-destructive">Cannot pick a past date</p>}
+              {daysLeft > 0 && !isPast && <p className="mt-1 text-xs text-muted-foreground">{daysLeft} days left</p>}
             </div>
             <div>
               <Label>Daily hours: {dailyHours}h</Label>
