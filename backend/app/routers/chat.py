@@ -67,7 +67,7 @@ def create_chat_message(payload: CreateChatMessage, db: Session = Depends(get_db
 
     history = _history(db, material.id)
 
-    generated_by, reply = generate_chat_reply(
+    generated_by, reply, warning = generate_chat_reply(
         material.content,
         history,
         provider=payload.provider,
@@ -88,6 +88,7 @@ def create_chat_message(payload: CreateChatMessage, db: Session = Depends(get_db
     return ChatReplyOut(
         user_message=_to_out(user_msg),
         assistant_message=_to_out(assistant_msg),
+        warning=warning or None,
     )
 
 

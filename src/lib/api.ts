@@ -24,6 +24,7 @@ export interface Quiz {
   timer_minutes: number;
   generated_by: "ai" | "mock" | "quick";
   questions: QuizQuestionBrief[];
+  warning?: string | null;
 }
 
 export interface QuestionReview {
@@ -91,6 +92,7 @@ export interface StudyNotes {
   generated_by: "ai" | "mock" | "quick";
   provider: string;
   model_name: string;
+  warning?: string | null;
 }
 
 export function getModels(): Promise<{ providers: ModelOption[] }> {
@@ -296,6 +298,7 @@ export interface ChatMessage {
 export interface ChatReply {
   user_message: ChatMessage;
   assistant_message: ChatMessage;
+  warning?: string | null;
 }
 
 export function getChatMessages(materialId: number): Promise<ChatMessage[]> {

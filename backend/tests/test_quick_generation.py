@@ -85,37 +85,42 @@ class QuickStudyNotesTests(unittest.TestCase):
 
 class QuickDispatchTests(unittest.TestCase):
     def test_generate_quiz_quick_stamps(self):
-        generated_by, questions = generate_quiz(
+        generated_by, questions, error_detail = generate_quiz(
             MATERIAL, "medium", 5, provider="quick"
         )
         self.assertEqual(generated_by, "quick")
+        self.assertEqual(error_detail, "")
         self.assertEqual(
             questions, quick.generate_quiz(MATERIAL, "medium", 5)
         )
 
     def test_generate_flashcards_quick_stamps(self):
-        generated_by, cards = generate_flashcards(
+        generated_by, cards, error_detail = generate_flashcards(
             MATERIAL, count=4, provider="quick"
         )
         self.assertEqual(generated_by, "quick")
+        self.assertEqual(error_detail, "")
         self.assertEqual(cards, quick.generate_flashcards(MATERIAL, 4))
 
     def test_generate_study_notes_quick_stamps(self):
-        generated_by, notes = generate_study_notes(
+        generated_by, notes, error_detail = generate_study_notes(
             MATERIAL, provider="quick"
         )
         self.assertEqual(generated_by, "quick")
+        self.assertEqual(error_detail, "")
         self.assertEqual(notes, quick.generate_study_notes(MATERIAL))
 
     def test_unknown_provider_falls_back_to_mock(self):
-        generated_by, _ = generate_quiz(
+        generated_by, _, error_detail = generate_quiz(
             MATERIAL, "medium", 5, provider="bogus"
         )
         self.assertEqual(generated_by, "mock")
+        self.assertTrue(error_detail)
 
     def test_empty_material_falls_back_to_mock(self):
-        generated_by, _ = generate_quiz("", "medium", 5, provider="quick")
+        generated_by, _, error_detail = generate_quiz("", "medium", 5, provider="quick")
         self.assertEqual(generated_by, "mock")
+        self.assertTrue(error_detail)
 
 
 if __name__ == "__main__":

@@ -4,6 +4,18 @@ import { useState, useEffect } from "react";
 import { getModels, type ModelOption } from "@/lib/api";
 import { useStudy } from "@/lib/context";
 
+const PROVIDER_BADGE: Record<string, string> = {
+  gemini: "Cloud",
+  ollama: "Local",
+  groq: "Groq",
+  openrouter: "OpenRouter",
+  quick: "Quick",
+};
+
+function providerBadge(provider: string): string {
+  return PROVIDER_BADGE[provider] ?? provider;
+}
+
 export function ModelSelect({ className }: { className?: string }) {
   const { model, setModel } = useStudy();
   const [options, setOptions] = useState<ModelOption[]>([]);
@@ -48,12 +60,7 @@ export function ModelSelect({ className }: { className?: string }) {
         {!loading &&
           options.map((opt) => (
             <option key={`${opt.provider}:${opt.name}`} value={`${opt.provider}:${opt.name}`}>
-              {opt.provider === "quick"
-                ? "Quick"
-                : opt.provider === "ollama"
-                  ? "Local"
-                  : "Cloud"}{" "}
-              — {opt.label}
+              {providerBadge(opt.provider)} — {opt.label}
             </option>
           ))}
       </select>

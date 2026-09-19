@@ -99,7 +99,8 @@ export default function Chat() {
       );
       if (reply.assistant_message.generated_by === "mock") {
         toast.info(
-          "Using sample answers — add your Gemini API key for AI chat."
+          reply.warning ??
+            `Showing sample answers — AI chat via ${model.provider} failed. Check the backend .env.`
         );
       } else if (reply.assistant_message.generated_by === "quick") {
         toast.info("Quick Mode: answers drawn deterministically, no AI call.");
@@ -276,7 +277,7 @@ export default function Chat() {
                       <p className="mt-1 pl-1 text-[10px] text-muted-foreground">
                         {m.generated_by === "quick"
                           ? "Quick Mode — deterministic reply, no AI call"
-                          : "Sample reply — add your Gemini API key for AI chat"}
+                          : "Sample reply — AI generation failed for the selected model"}
                       </p>
                     )}
                 </div>

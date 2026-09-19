@@ -51,7 +51,7 @@ def create_study_notes(payload: CreateStudyNotes, db: Session = Depends(get_db))
     db.query(StudyNote).filter(StudyNote.material_id == material.id).delete()
     db.flush()
 
-    generated_by, notes = ai_generate_study_notes(
+    generated_by, notes, warning = ai_generate_study_notes(
         material.content,
         provider=payload.provider,
         model_name=payload.model_name,
@@ -70,4 +70,6 @@ def create_study_notes(payload: CreateStudyNotes, db: Session = Depends(get_db))
     db.add(note)
     db.commit()
     db.refresh(note)
-    return _to_out(note)
+    out = _to_out(note)
+    out.warning = warning or None
+    return out

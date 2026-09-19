@@ -40,7 +40,7 @@ def create_quiz(payload: CreateQuiz, db: Session = Depends(get_db)):
     if not material:
         raise HTTPException(status_code=404, detail="Material not found.")
 
-    generated_by, questions = ai_generate_quiz(
+    generated_by, questions, warning = ai_generate_quiz(
         material.content,
         payload.difficulty,
         payload.question_count,
@@ -75,7 +75,9 @@ def create_quiz(payload: CreateQuiz, db: Session = Depends(get_db)):
 
     db.commit()
     db.refresh(quiz)
-    return _quiz_out(quiz)
+    out = _quiz_out(quiz)
+    out.warning = warning or None
+    return out
 
 
 @router.get("/{quiz_id}", response_model=QuizOut)

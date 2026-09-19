@@ -4,7 +4,7 @@
 
 Upload a PDF or paste text → pick a quiz difficulty, question count, timer, and **AI model** → take the quiz → review your answers → create flashcards to study the key concepts.
 
-Built with **Next.js (TypeScript + Tailwind + shadcn/ui)** on the frontend and **FastAPI (Python)** on the backend, with pluggable AI providers (**Gemini API** or **local Ollama**).
+Built with **Next.js (TypeScript + Tailwind + shadcn/ui)** on the frontend and **FastAPI (Python)** on the backend, with pluggable AI providers (**Gemini**, **Groq**, **OpenRouter**, or **local Ollama**).
 
 ---
 
@@ -49,7 +49,7 @@ pip install -r requirements.txt
 
 # Config — copy the example and add your key(s)
 cp .env.example .env                  # Window: Copy-Item .env.example .env
-# edit .env → set GEMINI_API_KEY=...
+# edit .env → set at least one API key (GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY)
 
 # Run with auto-reload for development
 ..\.venv\Scripts\python -m uvicorn app.main:app --reload --port 8000
@@ -99,9 +99,12 @@ SQLAlchemy ──► SQLite (dev, default) / PostgreSQL (via DATABASE_URL)
 
 AI routing:
    services/ai.py  (dispatcher, decides provider)
-      ├── services/gemini.py  (Google Gemini API — requires GEMINI_API_KEY)
-      ├── services/ollama.py  (local Ollama — no key needed)
-      └── seed.py ──────────── (mock fallback if generation fails)
+      ├── services/gemini.py   (Google Gemini API — requires GEMINI_API_KEY)
+      ├── services/groq.py     (Groq — OpenAI-compatible, requires GROQ_API_KEY)
+      ├── services/openrouter.py (OpenRouter — OpenAI-compatible, requires OPENROUTER_API_KEY)
+      ├── services/openai_compat.py (shared OpenAI-compatible /chat/completions helper)
+      ├── services/ollama.py   (local Ollama — no key needed)
+      └── seed.py ───────────── (mock fallback if generation fails)
 ```
 
 **Model selection is global**: the dropdown (`components/model-select.tsx`) stores the chosen provider/model in the shared context + `localStorage`, and it is sent with every quiz/flashcard generation request. Adding a new provider means editing **one** dispatcher, not multiple endpoints.
@@ -157,7 +160,7 @@ All endpoints live under `/api`. From the frontend they are proxied automaticall
 | Method | Endpoint | Body | Description |
 |---|---|---|---|
 | `GET` | `/api/health` | — | `{ status, gemini_configured, database }` |
-| `GET` | `/api/models` | — | Available models `{ providers: [{ provider, name, label }] }` (Gemini + Ollama) |
+| `GET` | `/api/models` | — | Available models `{ providers: [{ provider, name, label }] }` (Gemini, Groq, OpenRouter, Ollama, Quick) |
 | `POST` | `/api/materials` | `{ title?, text }` | Save pasted study material |
 | `POST` | `/api/materials/pdf` | `multipart` file | Save PDF, text extracted via PyMuPDF |
 | `GET` | `/api/materials/{id}` | — | Fetch material + word/char counts |
@@ -194,13 +197,17 @@ All endpoints live under `/api`. From the frontend they are proxied automaticall
 
 ## AI Providers
 
-Models come from two sources and are chosen **per session in the UI** (persisted in `localStorage`):
+Models come from multiple sources and are chosen **per session in the UI** (persisted in `localStorage`):
 
 | Provider | Requires | Model(s) | Notes |
 |---|---|---|---|
 | `gemini` | `GEMINI_API_KEY` in `backend/.env` | `gemini-2.5-flash` (set `GEMINI_MODEL`) | Cloud |
+| `groq` | `GROQ_API_KEY` in `backend/.env` | `openai/gpt-oss-20b` (set `GROQ_MODEL`) and `openai/gpt-oss-120b` (set `GROQ_MODEL_STRONG`) | OpenAI-compatible cloud provider, 128k context, JSON mode |
+| `openrouter` | `OPENROUTER_API_KEY` in `backend/.env` | `openrouter/free` (set `OPENROUTER_MODEL`); extra free models via `OPENROUTER_FREE_MODELS` (comma-separated) | OpenAI-compatible aggregator with free models; specific free model IDs come and go, so keep them env-configured |
 | `ollama` | Ollama running on `:11434` | anything pulled, e.g. `qwen3:8b` | Local, free, offline |
 | `quick` | nothing | `quick` | **Quick Mode** — deterministic local generation (no API call) |
+
+Groq and OpenRouter use the same OpenAI-compatible `/chat/completions` protocol through `services/openai_compat.py`, sending strict-JSON prompts and robustly parsing the response so quiz/flashcard/study-note schemas stay validated in `services/ai.py`. If a free model goes away or rate-limits, or the API key is missing, generation **falls back to `seed.py` mock data** and the UI shows a `warning`/mock toast — it never fails the whole request.
 
 **Quick Mode:** pick "Quick (deterministic, no AI)" in the AI Model dropdown. Generation runs server-side with pure Python (term frequency + sentence analysis) — cloze quizzes, term-definition flashcards, and sectioned study notes — always drawn from the uploaded material. The same input + configuration always produces the same output, never hits an external API, and responses are stamped `generated_by: "quick"` so the UI can badge them separately from LLM (`"ai"`) and mock-fallback (`"mock"`) content.
 
