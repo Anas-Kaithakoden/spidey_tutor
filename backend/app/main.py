@@ -24,6 +24,7 @@ from app.routers import (
     podcasts,
     quizzes,
     study_notes,
+    study_plan,
     youtube_materials,
 )
 from app.schemas import HealthOut, ModelInfo, ModelsOut
@@ -78,6 +79,7 @@ app.include_router(chat.router)
 app.include_router(analytics.router)
 app.include_router(youtube_materials.router)
 app.include_router(exams.router)
+app.include_router(study_plan.router)
 
 
 @app.get("/api/health", response_model=HealthOut)
