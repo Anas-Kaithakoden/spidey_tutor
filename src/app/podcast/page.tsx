@@ -193,7 +193,7 @@ export default function PodcastPage() {
           <div className="min-w-0 space-y-4">
             {active && (
               <>
-                <PodcastPlayer episode={active} onUpdated={handleUpdated} />
+                <PodcastPlayer key={active.id} episode={active} onUpdated={handleUpdated} />
                 <div className="flex justify-end gap-2">
                   <Button
                     onClick={handleDelete}

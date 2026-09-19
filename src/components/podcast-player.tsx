@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertCircle,
@@ -12,6 +12,7 @@ import {
   Play,
   RefreshCw,
   Sparkles,
+  Square,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,8 +54,13 @@ export function PodcastPlayer({ episode, onUpdated }: Props) {
   const [speed, setSpeed] = useState(1);
   const [showTranscript, setShowTranscript] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [browserPlaying, setBrowserPlaying] = useState(false);
+  const [activeLine, setActiveLine] = useState<number | null>(null);
+  const browserActiveRef = useRef(false);
 
   const canPlay = episode.has_audio && !!episode.audio_url;
+  const browserSupported =
+    typeof window !== "undefined" && "speechSynthesis" in window;
 
   function toggle() {
     const audio = audioRef.current;
@@ -95,12 +101,56 @@ export function PodcastPlayer({ episode, onUpdated }: Props) {
     }
   }
 
+  function stopBrowser() {
+    browserActiveRef.current = false;
+    window.speechSynthesis?.cancel();
+    setBrowserPlaying(false);
+    setActiveLine(null);
+  }
+
+  function speakBrowserLine(i: number) {
+    if (!browserActiveRef.current) return;
+    if (i >= episode.lines.length) {
+      setBrowserPlaying(false);
+      setActiveLine(null);
+      return;
+    }
+    const line = episode.lines[i];
+    const utter = new SpeechSynthesisUtterance(line.text);
+    // Mimic two hosts with pitch: host_one slightly lower, host_two higher.
+    utter.rate = speed;
+    utter.pitch = line.speaker === "host_one" ? 0.85 : 1.2;
+    utter.onend = () => speakBrowserLine(i + 1);
+    utter.onerror = () => speakBrowserLine(i + 1);
+    setBrowserPlaying(true);
+    setActiveLine(i);
+    window.speechSynthesis.speak(utter);
+  }
+
+  function toggleBrowser() {
+    if (!browserSupported || episode.lines.length === 0) return;
+    if (browserPlaying) {
+      stopBrowser();
+      return;
+    }
+    browserActiveRef.current = true;
+    speakBrowserLine(0);
+  }
+
   const statusText: Record<PodcastAudioStatus, string> = {
     unavailable:
       "Audio unavailable — add a GEMINI_API_KEY to generate it.",
     error: "Audio generation failed. You can retry below.",
     ready: "",
   };
+
+  useEffect(
+    () => () => {
+      browserActiveRef.current = false;
+      if (typeof window !== "undefined") window.speechSynthesis?.cancel();
+    },
+    []
+  );
 
   return (
     <Card>
@@ -190,22 +240,47 @@ export function PodcastPlayer({ episode, onUpdated }: Props) {
           <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed p-4">
             <AlertCircle className="size-5 shrink-0 text-muted-foreground" />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium">Script ready, audio pending</p>
-              <p className="text-xs text-muted-foreground">{statusText[episode.audio_status]}</p>
+              <p className="text-sm font-medium">
+                {browserPlaying
+                  ? "Playing in browser"
+                  : "Script ready, audio pending"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {browserPlaying
+                  ? "Reading the transcript with your browser's built-in voice."
+                  : statusText[episode.audio_status]}
+              </p>
             </div>
             {episode.lines.length > 0 && (
-              <Button
-                onClick={retryAudio}
-                disabled={regenerating}
-                variant="outline"
-                size="sm"
-                className="gap-2"
-              >
-                <RefreshCw
-                  className={cn("size-4", regenerating && "animate-spin")}
-                />
-                {regenerating ? "Synthesizing..." : "Retry audio"}
-              </Button>
+              <>
+                {browserSupported && (
+                  <Button
+                    onClick={toggleBrowser}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    {browserPlaying ? (
+                      <Square className="size-4" />
+                    ) : (
+                      <Play className="size-4" />
+                    )}
+                    {browserPlaying ? "Stop" : "Play in browser"}
+                  </Button>
+                )}
+                <Button
+                  onClick={retryAudio}
+                  disabled={regenerating}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <RefreshCw
+                    className={cn("size-4", regenerating && "animate-spin")}
+                  />
+                  {regenerating ? "Synthesizing..." : "Retry audio"}
+                </Button>
+              </>
             )}
           </div>
         )}
@@ -223,6 +298,7 @@ export function PodcastPlayer({ episode, onUpdated }: Props) {
           <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
             <Mic className="size-3" /> Gemini TTS
             {episode.provider !== "gemini" && ` • script via ${episode.provider}`}
+            {!canPlay && " • browser fallback"}
           </span>
         </div>
 
@@ -234,8 +310,9 @@ export function PodcastPlayer({ episode, onUpdated }: Props) {
                 <div
                   key={i}
                   className={cn(
-                    "flex gap-3 rounded-lg p-3",
-                    isOne ? "bg-muted/50" : "bg-primary/5"
+                    "flex gap-3 rounded-lg p-3 transition-colors",
+                    isOne ? "bg-muted/50" : "bg-primary/5",
+                    activeLine === i && "ring-2 ring-primary/40"
                   )}
                 >
                   <span
