@@ -16,6 +16,7 @@ def _to_out(msg: ChatMessage) -> ChatMessageOut:
         role=msg.role,
         content=msg.content,
         generated_by=msg.generated_by,
+        language=msg.language,
         created_at=msg.created_at,
     )
 
@@ -61,6 +62,7 @@ def create_chat_message(payload: CreateChatMessage, db: Session = Depends(get_db
         role="user",
         content=payload.content,
         generated_by="",
+        language=payload.language,
     )
     db.add(user_msg)
     db.flush()
@@ -72,6 +74,7 @@ def create_chat_message(payload: CreateChatMessage, db: Session = Depends(get_db
         history,
         provider=payload.provider,
         model_name=payload.model_name,
+        language=payload.language,
     )
 
     assistant_msg = ChatMessage(
@@ -79,6 +82,7 @@ def create_chat_message(payload: CreateChatMessage, db: Session = Depends(get_db
         role="assistant",
         content=reply,
         generated_by=generated_by,
+        language=payload.language,
     )
     db.add(assistant_msg)
     db.commit()

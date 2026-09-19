@@ -101,6 +101,7 @@ export interface StudyNotes {
   generated_by: "ai" | "mock" | "quick";
   provider: string;
   model_name: string;
+  language: string;
   warning?: string | null;
 }
 
@@ -259,11 +260,17 @@ export function getStudyNotes(
 export function generateStudyNotes(
   materialId: number,
   provider: string,
-  model_name: string
+  model_name: string,
+  language: string = "en"
 ): Promise<StudyNotes> {
   return request<StudyNotes>("/study-notes", {
     method: "POST",
-    body: JSON.stringify({ material_id: materialId, provider, model_name }),
+    body: JSON.stringify({
+      material_id: materialId,
+      provider,
+      model_name,
+      language,
+    }),
   });
 }
 
@@ -329,6 +336,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   generated_by: string;
+  language: string;
   created_at: string;
 }
 
@@ -346,7 +354,8 @@ export function sendChatMessage(
   materialId: number,
   content: string,
   provider: string,
-  model_name: string
+  model_name: string,
+  language: string = "en"
 ): Promise<ChatReply> {
   return request<ChatReply>("/chat", {
     method: "POST",
@@ -355,6 +364,7 @@ export function sendChatMessage(
       content,
       provider,
       model_name,
+      language,
     }),
   });
 }

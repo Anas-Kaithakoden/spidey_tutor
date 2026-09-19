@@ -109,10 +109,20 @@ def generate_flashcards(
 def generate_study_notes(
     material_text: str,
     model_name: str,
+    language: str = "en",
     max_material_chars: int = 40000,
 ) -> dict:
     truncated = material_text[:max_material_chars]
 
+    ml_prompt = ""
+    if language.lower().startswith("ml"):
+        ml_prompt = (
+            "- Write ALL output (title, summary, headings, content, "
+            "bullet points, terms and definitions) in Malayalam (മലയാളം).\n"
+            "- Explain the study material in Malayalam; keep technical terms "
+            "and proper nouns in English where clearer, with a short "
+            "Malayalam gloss.\n"
+        )
     system = (
         "You are a study notes generator for a study tool.\n"
         "Create structured, student-friendly study notes from the material.\n"
@@ -122,6 +132,7 @@ def generate_study_notes(
         "- Keep explanations concise and clear.\n"
         "- Use bullet points where listing facts, steps, or examples helps.\n"
         "- Highlight the most important concepts and definitions in key_concepts.\n"
+        f"{ml_prompt}"
         'Respond with STRICT JSON only matching: '
         '{"title": string, "summary": string, '
         '"sections": [{"heading": string, "content": string, "bullet_points": [string]}], '
@@ -160,12 +171,20 @@ def generate_chat_reply(
     material_text: str,
     history: list[dict],
     model_name: str,
+    language: str = "en",
     max_material_chars: int = 40000,
 ) -> str:
     """Answer the last user message, grounded in the study material."""
 
     truncated = material_text[:max_material_chars]
 
+    ml_prompt = ""
+    if language.lower().startswith("ml"):
+        ml_prompt = (
+            "- Reply in Malayalam (മലയാളം).\n"
+            "- Keep technical terms in English where clearer, with a short "
+            "Malayalam explanation.\n"
+        )
     system = (
         "You are a study assistant that answers questions strictly based "
         "ONLY on the uploaded study material provided to you.\n"
@@ -178,6 +197,7 @@ def generate_chat_reply(
         "- Follow-up questions may refer back to earlier messages or to the "
         "material.\n"
         "- Keep answers concise and clear.\n"
+        f"{ml_prompt}"
     )
     conversation = "\n".join(
         f"{m['role']}: {m['content']}" for m in history

@@ -59,9 +59,10 @@ def generate_flashcards(
 def generate_study_notes(
     material_text: str,
     model_name: str = "",
+    language: str = "en",
 ) -> dict:
     return openai_compat.generate_study_notes(
-        _ready_cfg(), material_text, _model(model_name)
+        _ready_cfg(), material_text, _model(model_name), language=language
     )
 
 
@@ -69,9 +70,10 @@ def generate_chat_reply(
     material_text: str,
     history: list[dict],
     model_name: str = "",
+    language: str = "en",
 ) -> str:
     return openai_compat.generate_chat_reply(
-        _ready_cfg(), material_text, history, _model(model_name)
+        _ready_cfg(), material_text, history, _model(model_name), language=language
     )
 
 

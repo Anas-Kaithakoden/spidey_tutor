@@ -98,6 +98,7 @@ class CreateStudyNotes(BaseModel):
     material_id: int
     provider: str = "gemini"
     model_name: str = ""
+    language: str = "en"
 
 
 class StudyNoteSection(BaseModel):
@@ -121,6 +122,7 @@ class StudyNotesOut(BaseModel):
     generated_by: str
     provider: str
     model_name: str
+    language: str = "en"
     created_at: datetime
     warning: str | None = None
 
@@ -213,6 +215,7 @@ class ChatMessageOut(BaseModel):
     role: str
     content: str
     generated_by: str
+    language: str = "en"
     created_at: datetime
 
 
@@ -221,6 +224,7 @@ class CreateChatMessage(BaseModel):
     content: str = Field(min_length=1, max_length=4000)
     provider: str = "gemini"
     model_name: str = ""
+    language: str = "en"
 
     @field_validator("content")
     @classmethod

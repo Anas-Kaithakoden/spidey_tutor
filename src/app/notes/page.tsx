@@ -20,6 +20,10 @@ import {
   type StudyNotes,
 } from "@/lib/api";
 import { ModelSelect } from "@/components/model-select";
+import {
+  LanguageToggle,
+  type StudyLanguage,
+} from "@/components/language-toggle";
 
 export default function Notes() {
   const router = useRouter();
@@ -27,6 +31,7 @@ export default function Notes() {
   const [notes, setNotes] = useState<StudyNotes | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [language, setLanguage] = useState<StudyLanguage>("en");
 
   useEffect(() => {
     if (!material) {
@@ -60,7 +65,8 @@ export default function Notes() {
       const generated = await generateStudyNotes(
         material.id,
         model.provider,
-        model.name
+        model.name,
+        language
       );
       setNotes(generated);
       if (generated.generated_by === "mock") {
@@ -112,7 +118,10 @@ export default function Notes() {
             structures the content into sections and highlights the important
             concepts and definitions.
           </p>
-          <ModelSelect className="w-full max-w-xs" />
+          <div className="flex w-full max-w-xs items-center gap-2">
+            <ModelSelect className="flex-1" />
+            <LanguageToggle value={language} onChange={setLanguage} />
+          </div>
           <Button
             onClick={handleGenerate}
             disabled={generating}
@@ -149,6 +158,11 @@ export default function Notes() {
                 {notes.generated_by === "quick" && (
                   <Badge variant="secondary" className="shrink-0">
                     Quick Mode
+                  </Badge>
+                )}
+                {notes.language === "ml" && (
+                  <Badge variant="secondary" className="shrink-0">
+                    മലയാളം
                   </Badge>
                 )}
               </div>
@@ -218,7 +232,8 @@ export default function Notes() {
             </p>
           )}
 
-          <div className="flex justify-center pt-2">
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <LanguageToggle value={language} onChange={setLanguage} />
             <Button
               variant="outline"
               onClick={handleGenerate}

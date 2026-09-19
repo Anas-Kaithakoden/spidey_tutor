@@ -278,10 +278,36 @@ def generate_flashcards(
     return data.get("flashcards", [])[:count]
 
 
+def _language_instruction(language: str, *, json_output: bool) -> str:
+    """Prompt line instructing the model which language to write in.
+
+    Malayalam is detected via the ``ml`` prefix (matches the Study Plan
+    feature); anything else stays in English.
+    """
+    if not language.lower().startswith("ml"):
+        return ""
+    if json_output:
+        return (
+            "\n- Write ALL output (title, summary, headings, content, "
+            "bullet points, terms and definitions) in Malayalam (മലയാളം).\n"
+            "- Explain the study material in Malayalam; keep technical terms "
+            "and proper nouns in English where clearer, with a short "
+            "Malayalam gloss."
+        )
+    return (
+        "\n- Reply in Malayalam (മലയാളം).\n"
+        "- Keep technical terms in English where clearer, with a short "
+        "Malayalam explanation.\n"
+        "- Stay grounded in the material and never invent facts."
+    )
+
+
 def generate_study_notes(
     cfg: CompatConfig,
     material_text: str,
     model_name: str,
+    *,
+    language: str = "en",
     max_material_chars: int = 40000,
 ) -> dict:
     truncated = material_text[:max_material_chars]
@@ -294,7 +320,8 @@ def generate_study_notes(
         "- Keep explanations concise and clear.\n"
         "- Use bullet points where listing facts, steps, or examples helps.\n"
         "- Highlight the most important concepts and definitions in key_concepts.\n"
-        'Respond with STRICT JSON only matching: '
+        + _language_instruction(language, json_output=True)
+        + 'Respond with STRICT JSON only matching: '
         '{"title": string, "summary": string, '
         '"sections": [{"heading": string, "content": string, "bullet_points": [string]}], '
         '"key_concepts": [{"term": string, "definition": string}]}'
@@ -307,6 +334,8 @@ def generate_chat_reply(
     material_text: str,
     history: list[dict],
     model_name: str,
+    *,
+    language: str = "en",
     max_material_chars: int = 40000,
 ) -> str:
     truncated = material_text[:max_material_chars]
@@ -322,6 +351,7 @@ def generate_chat_reply(
         "- Follow-up questions may refer back to earlier messages or to the "
         "material.\n"
         "- Keep answers concise and clear.\n"
+        + _language_instruction(language, json_output=False)
     )
     conversation = "\n".join(f"{m['role']}: {m['content']}" for m in history)
     return chat_text(

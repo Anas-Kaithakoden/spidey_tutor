@@ -198,11 +198,15 @@ def generate_study_notes(
     material_text: str,
     provider: str = "gemini",
     model_name: str = "",
+    language: str = "en",
 ) -> tuple[str, dict, str]:
     """Generate study notes. Returns (generated_by, notes dict, error_detail).
 
     ``error_detail`` is a user-safe reason string, non-empty only when the
-    generation fell back to mock data.
+    generation fell back to mock data. ``language`` (e.g. ``"en"``/
+    ``"ml"``) is forwarded to the AI providers so they write the notes in
+    that language; Quick Mode is deterministic and stays in the material's
+    own language.
     """
     error_detail = ""
     try:
@@ -212,14 +216,14 @@ def generate_study_notes(
             success_tag = "quick"
         elif provider == "ollama":
             name = model_name or "qwen3:8b"
-            raw = ollama.generate_study_notes(material_text, name)
+            raw = ollama.generate_study_notes(material_text, name, language=language)
         elif provider == "gemini":
             name = _fix_model(model_name) if model_name else settings.gemini_model
-            raw = gemini.generate_study_notes_raw(material_text, name)
+            raw = gemini.generate_study_notes_raw(material_text, name, language=language)
         elif provider == "groq":
-            raw = groq.generate_study_notes(material_text, model_name)
+            raw = groq.generate_study_notes(material_text, model_name, language=language)
         elif provider == "openrouter":
-            raw = openrouter.generate_study_notes(material_text, model_name)
+            raw = openrouter.generate_study_notes(material_text, model_name, language=language)
         else:
             raise ValueError(f"Unknown provider: {provider}")
 
@@ -240,6 +244,7 @@ def generate_chat_reply(
     history: list[dict],
     provider: str = "gemini",
     model_name: str = "",
+    language: str = "en",
 ) -> tuple[str, str, str]:
     """Generate a chat reply grounded in the material.
 
@@ -248,6 +253,10 @@ def generate_chat_reply(
 
     ``history`` is the conversation so far (oldest first, ending with the
     current user question) as ``{"role": ..., "content": ...}`` dicts.
+
+    ``language`` (e.g. ``"en"``/``"ml"``) is forwarded to the AI providers
+    so the answer is written in that language; Quick Mode is deterministic
+    and stays in the material's own language.
 
     The fallback deliberately reuses ``quick.generate_chat_reply`` (rather
     than generic ``seed.py`` content): a chat answer about a specific upload
@@ -262,14 +271,14 @@ def generate_chat_reply(
             success_tag = "quick"
         elif provider == "ollama":
             name = model_name or "qwen3:8b"
-            raw = ollama.generate_chat_reply(material_text, history, name)
+            raw = ollama.generate_chat_reply(material_text, history, name, language=language)
         elif provider == "gemini":
             name = _fix_model(model_name) if model_name else settings.gemini_model
-            raw = gemini.generate_chat_reply_raw(material_text, history, name)
+            raw = gemini.generate_chat_reply_raw(material_text, history, name, language=language)
         elif provider == "groq":
-            raw = groq.generate_chat_reply(material_text, history, model_name)
+            raw = groq.generate_chat_reply(material_text, history, model_name, language=language)
         elif provider == "openrouter":
-            raw = openrouter.generate_chat_reply(material_text, history, model_name)
+            raw = openrouter.generate_chat_reply(material_text, history, model_name, language=language)
         else:
             raise ValueError(f"Unknown provider: {provider}")
 
