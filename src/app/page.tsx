@@ -19,7 +19,7 @@ export default function Home() {
         to help you study smarter.
       </p>
 
-      <Button render={<Link href="/add" />} size="lg" className="mb-16 px-8">
+      <Button render={<Link href="/add" />} size="lg" className="mb-16 px-8" nativeButton={false}>
         Start Studying
       </Button>
 
