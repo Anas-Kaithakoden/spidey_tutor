@@ -19,6 +19,7 @@ import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
+  ClipboardCheck,
   CreditCard,
   FileText,
   GraduationCap,
@@ -177,7 +178,7 @@ export default function ProgressDashboard() {
           icon={<Activity className="size-5" />}
           label="Study Sessions"
           value={String(data.study_sessions)}
-          sub="quizzes + flashcard reviews"
+          sub="quizzes + flashcard reviews + exams"
         />
         <StatCard
           icon={<CalendarDays className="size-5" />}
@@ -391,6 +392,7 @@ const ACTIVITY_ICONS: Record<
   flashcards: <CreditCard className="size-4" />,
   material: <FileText className="size-4" />,
   notes: <NotebookPen className="size-4" />,
+  exam: <ClipboardCheck className="size-4" />,
 };
 
 function ActivityRow({ item }: { item: Analytics["recent_activity"][number] }) {

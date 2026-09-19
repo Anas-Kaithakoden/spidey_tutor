@@ -4,7 +4,16 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Flashcard, Material, Quiz, QuizResult, StudyNote
+from app.models import (
+    Exam,
+    ExamAttempt,
+    ExamEvaluation,
+    Flashcard,
+    Material,
+    Quiz,
+    QuizResult,
+    StudyNote,
+)
 from app.schemas import (
     AnalyticsOut,
     RecentActivity,
@@ -26,6 +35,13 @@ def get_analytics(db: Session = Depends(get_db)):
         .order_by(QuizResult.created_at.asc())
         .all()
     )
+    exam_evaluations = (
+        db.query(ExamEvaluation, ExamAttempt, Exam)
+        .join(ExamAttempt, ExamEvaluation.attempt_id == ExamAttempt.id)
+        .join(Exam, ExamAttempt.exam_id == Exam.id)
+        .order_by(ExamEvaluation.created_at.asc())
+        .all()
+    )
 
     material_map = {m.id: m for m in materials}
     quiz_map = {q.id: q for q in db.query(Quiz).all()}
@@ -41,12 +57,15 @@ def get_analytics(db: Session = Depends(get_db)):
     )
     best_score = max((r.percentage for r in results), default=None)
     flashcards_reviewed = sum(c.review_count for c in flashcards)
-    study_sessions = quizzes_completed + flashcards_reviewed
+    exams_completed = len(exam_evaluations)
+    study_sessions = quizzes_completed + flashcards_reviewed + exams_completed
 
     activity_dates: set[date] = {r.created_at.date() for r in results}
     activity_dates.update(c.created_at.date() for c in flashcards)
     activity_dates.update(n.created_at.date() for n in notes)
     activity_dates.update(m.created_at.date() for m in materials)
+    for ev, _attempt, _exam in exam_evaluations:
+        activity_dates.add(ev.created_at.date())
     days_studied = len(activity_dates)
 
     # Performance grouped by quiz material (the app's closest notion of topics)
@@ -145,10 +164,24 @@ def get_analytics(db: Session = Depends(get_db)):
                 created_at=n.created_at,
             )
         )
+    for ev, attempt, exam in exam_evaluations:
+        material = material_map.get(exam.material_id) if exam else None
+        events.append(
+            RecentActivity(
+                kind="exam",
+                title=exam.title if exam else "Exam",
+                detail=(
+                    f"Scored {ev.percentage}% "
+                    f"({ev.total_score}/{ev.max_score})"
+                ),
+                material_id=exam.material_id if exam else None,
+                created_at=ev.created_at,
+            )
+        )
     events.sort(key=lambda e: e.created_at, reverse=True)
 
     return AnalyticsOut(
-        has_activity=bool(results or flashcards),
+        has_activity=bool(results or flashcards or exams_completed),
         materials=len(materials),
         quizzes_completed=quizzes_completed,
         questions_answered=questions_answered,

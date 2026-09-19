@@ -234,3 +234,82 @@ class ChatReplyOut(BaseModel):
     user_message: ChatMessageOut
     assistant_message: ChatMessageOut
     warning: str | None = None
+
+
+class CreateExam(BaseModel):
+    material_id: int
+    title: str | None = None
+    difficulty: str = "medium"
+    question_count: int = Field(default=10, ge=1, le=50)
+    duration_minutes: int = Field(default=30, ge=1, le=240)
+    provider: str = "gemini"
+    model_name: str = ""
+
+
+class ExamQuestionBrief(BaseModel):
+    id: int
+    question_type: str
+    question: str
+    options: list[str] | None = None
+    max_score: int
+
+
+class ExamOut(BaseModel):
+    id: int
+    material_id: int
+    title: str
+    difficulty: str
+    question_count: int
+    duration_minutes: int
+    generated_by: str
+    provider: str
+    model_name: str
+    questions: list[ExamQuestionBrief]
+    warning: str | None = None
+
+
+class ExamAnswerIn(BaseModel):
+    question_id: int
+    text: str | None = None
+    option: int | None = None
+
+
+class SubmitExam(BaseModel):
+    answers: list[ExamAnswerIn] = []
+    time_taken_seconds: int = 0
+    # Optional grading model override (defaults to the exam's provider/model).
+    provider: str | None = None
+    model_name: str = ""
+    evaluation_criteria: dict | None = None
+
+
+class ExamQuestionReview(BaseModel):
+    question_id: int
+    question: str
+    question_type: str
+    user_answer: str | None
+    expected_answer: str
+    status: str  # correct | partial | incorrect | unanswered
+    score: float
+    max_score: int
+    feedback: str
+    improved_answer: str | None = None
+
+
+class ExamResultOut(BaseModel):
+    result_id: int
+    exam_id: int
+    attempt_id: int
+    total_score: float
+    max_score: int
+    percentage: float
+    summary: str
+    strengths: list[str]
+    weak_areas: list[str]
+    topics_to_improve: list[str]
+    recommendations: list[str]
+    reviews: list[ExamQuestionReview]
+    grading_method: str  # deterministic | hybrid | fallback
+    generated_by: str
+    criteria_used: dict
+    warning: str | None = None

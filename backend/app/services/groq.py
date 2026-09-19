@@ -76,6 +76,15 @@ def generate_chat_reply(
     )
 
 
+def generate_json(
+    system: str, user: str, model_name: str = "", temperature: float = 0.3
+) -> dict:
+    """Generic strict-JSON completion (used by Exam Mode prompts)."""
+    return openai_compat.chat_json(
+        _ready_cfg(), _model(model_name), system, user, temperature=temperature
+    )
+
+
 def list_models() -> list[dict]:
     """Provider/models advertised to the UI (must have a matching provider key)."""
     return [

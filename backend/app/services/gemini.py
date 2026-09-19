@@ -18,6 +18,22 @@ def _client() -> genai.Client:
     return _client_instance
 
 
+def generate_json(
+    system: str, user: str, model_name: str, temperature: float = 0.3
+) -> dict:
+    """Generic strict-JSON completion (used by Exam Mode prompts)."""
+    prompt = f"{system}\n\n{user}"
+    response = _client().models.generate_content(
+        model=model_name,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json",
+            temperature=temperature,
+        ),
+    )
+    return json.loads(response.text)
+
+
 def generate_quiz_raw(
     material_text: str,
     difficulty: str,

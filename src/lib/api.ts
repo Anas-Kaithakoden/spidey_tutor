@@ -278,7 +278,7 @@ export interface TopicPerformance {
 }
 
 export interface RecentActivity {
-  kind: "quiz" | "flashcards" | "material" | "notes";
+  kind: "quiz" | "flashcards" | "material" | "notes" | "exam";
   title: string;
   detail: string;
   material_id: number | null;
@@ -363,4 +363,125 @@ export function clearChat(materialId: number): Promise<void> {
   return request<void>(`/chat?material_id=${materialId}`, {
     method: "DELETE",
   });
+}
+
+export type ExamQuestionType =
+  | "mcq"
+  | "short_answer"
+  | "fill_blank"
+  | "paragraph"
+  | "essay";
+
+export interface ExamQuestionBrief {
+  id: number;
+  question_type: ExamQuestionType;
+  question: string;
+  options: string[] | null;
+  max_score: number;
+}
+
+export interface Exam {
+  id: number;
+  material_id: number;
+  title: string;
+  difficulty: string;
+  question_count: number;
+  duration_minutes: number;
+  generated_by: "ai" | "mock" | "quick";
+  provider: string;
+  model_name: string;
+  questions: ExamQuestionBrief[];
+  warning?: string | null;
+}
+
+export interface CreateExamPayload {
+  material_id: number;
+  title?: string;
+  difficulty: "easy" | "medium" | "hard";
+  question_count: number;
+  duration_minutes: number;
+  provider: string;
+  model_name: string;
+}
+
+export interface ExamAnswerIn {
+  question_id: number;
+  text?: string | null;
+  option?: number | null;
+}
+
+export type ExamReviewStatus = "correct" | "partial" | "incorrect" | "unanswered";
+
+export interface ExamQuestionReview {
+  question_id: number;
+  question: string;
+  question_type: ExamQuestionType;
+  user_answer: string | null;
+  expected_answer: string;
+  status: ExamReviewStatus;
+  score: number;
+  max_score: number;
+  feedback: string;
+  improved_answer: string | null;
+}
+
+export interface ExamResult {
+  result_id: number;
+  exam_id: number;
+  attempt_id: number;
+  total_score: number;
+  max_score: number;
+  percentage: number;
+  summary: string;
+  strengths: string[];
+  weak_areas: string[];
+  topics_to_improve: string[];
+  recommendations: string[];
+  reviews: ExamQuestionReview[];
+  grading_method: "deterministic" | "hybrid" | "fallback";
+  generated_by: "ai" | "mock" | "quick";
+  criteria_used: Record<string, unknown>;
+  warning?: string | null;
+}
+
+export function listMaterials(): Promise<Material[]> {
+  return request<Material[]>("/materials");
+}
+
+export function listExams(materialId?: number): Promise<Exam[]> {
+  const qs = materialId ? `?material_id=${materialId}` : "";
+  return request<Exam[]>(`/exams${qs}`);
+}
+
+export function createExam(payload: CreateExamPayload): Promise<Exam> {
+  return request<Exam>("/exams", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getExam(examId: number): Promise<Exam> {
+  return request<Exam>(`/exams/${examId}`);
+}
+
+export function submitExam(
+  examId: number,
+  answers: ExamAnswerIn[],
+  timeTakenSeconds: number,
+  provider: string,
+  model_name: string
+): Promise<ExamResult> {
+  return request<ExamResult>(`/exams/${examId}/submit`, {
+    method: "POST",
+    body: JSON.stringify({
+      answers,
+      time_taken_seconds: timeTakenSeconds,
+      provider,
+      model_name,
+    }),
+  });
+}
+
+export function getExamResult(examId: number): Promise<ExamResult> {
+  return request<ExamResult>(`/exams/${examId}/result`);
 }

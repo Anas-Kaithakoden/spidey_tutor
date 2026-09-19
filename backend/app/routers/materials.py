@@ -117,6 +117,14 @@ def upload_office(file: UploadFile = File(...), db: Session = Depends(get_db)):
     return _to_out(material)
 
 
+@router.get("", response_model=list[MaterialOut])
+def list_materials(db: Session = Depends(get_db)):
+    materials = (
+        db.query(Material).order_by(Material.created_at.desc()).all()
+    )
+    return [_to_out(m) for m in materials]
+
+
 @router.get("/{material_id}", response_model=MaterialOut)
 def get_material(material_id: int, db: Session = Depends(get_db)):
     material = db.get(Material, material_id)

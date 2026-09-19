@@ -291,3 +291,134 @@ def generate_chat_reply(
     if len(answer) > max_answer_chars:
         answer = answer[:max_answer_chars].rsplit(" ", 1)[0] + "..."
     return answer
+
+
+# Exam Mode -------------------------------------------------------------------
+# Deterministic mixed-type exams. The caller passes an ordered ``distribution``
+# (one question type per slot); quick mode fills each slot strictly from the
+# material so questions never reach outside the uploaded text.
+
+EXAM_TYPE_PHRASINGS = {
+    "mcq": "Which term best completes this sentence?\n\n\"{cloze}\"",
+    "fill_blank": "Fill in the blank:\n\n\"{cloze}\"",
+    "short_answer": "In one or two sentences, define \"{term}\" as covered in the study material.",
+    "paragraph": (
+        "Based only on the study material, explain the role and meaning of "
+        "\"{term}\" in a short paragraph."
+    ),
+    "essay": (
+        "Write a short essay about \"{term}\" using ONLY the study material. "
+        "Cover the key points the material makes and stay grounded in the text."
+    ),
+}
+
+
+def _default_exam_distribution(question_count: int) -> list[str]:
+    """A sensible deterministic mix; same logic as the AI planner."""
+    order = ["mcq", "mcq", "short_answer", "fill_blank", "paragraph", "essay"]
+    distribution: list[str] = []
+    idx = 0
+    while len(distribution) < question_count:
+        distribution.append(order[idx % len(order)])
+        idx += 1
+    return distribution[:question_count]
+
+
+def _mcq_from(
+    sentence: str, term: str, distractors: list[str], offset: int
+) -> dict:
+    options = list(dict.fromkeys([term] + distractors))
+    if len(options) < 2:
+        raise ValueError("Not enough terms for an MCQ exam question.")
+    correct_idx = offset % len(options)
+    rotated = options[correct_idx:] + options[:correct_idx]
+    return {
+        "question_type": "mcq",
+        "question": (
+            "Which term best completes this sentence?\n\n"
+            f"\"{_cloze(sentence, term)}\""
+        ),
+        "options": rotated,
+        "correct_answer": correct_idx,
+        "accepted_answer": term,
+        "explanation": (
+            f"The answer is \"{term}\", which appears in the study "
+            f"material: \"{sentence}\""
+        ),
+    }
+
+
+def _from_sentence(qtype: str, term: str, sentences: list[str]) -> dict:
+    sentence = _sentence_with(sentences, term)
+    if sentence is None:
+        raise ValueError(f"No sentence covering \"{term}\"")
+    return {
+        "question_type": qtype,
+        "question": EXAM_TYPE_PHRASINGS[qtype].format(
+            term=term, cloze=_cloze(sentence, term) if qtype == "fill_blank" else sentence
+        ),
+        "accepted_answer": sentence,
+        "key_points": [term],
+        "explanation": (
+            f"Based on the study material: \"{sentence}\""
+        ),
+    }
+
+
+def generate_exam(
+    material_text: str,
+    difficulty: str = "medium",
+    question_count: int = 10,
+    distribution: list[str] | None = None,
+) -> list[dict]:
+    """Deterministically build a mixed-type exam from the material.
+
+    The returned questions mirror the raw dicts the LLM providers return so
+    the shared normalizer in ``services/exam.py`` can validate them unchanged.
+    Returns fewer questions than requested when the material is too short.
+    """
+    filled = distribution if distribution else _default_exam_distribution(question_count)
+    filled = filled[:question_count]
+    if not filled:
+        return []
+
+    sentences = _split_sentences(material_text)
+    ranked = [term for term, _ in _term_counts(material_text)]
+    pairs = _band(_pairs(sentences, ranked), difficulty)
+    distractors_pool = [term for _, term in _pairs(sentences, ranked)]
+
+    questions: list[dict] = []
+    slot = 0
+    for qtype in filled:
+        if qtype == "mcq":
+            if len(pairs) < 2:
+                break
+            sentence, term = pairs[slot % len(pairs)]
+            distractors = [
+                t for t in distractors_pool if t != term
+            ][:3]
+            try:
+                questions.append(
+                    _mcq_from(sentence, term, distractors, slot)
+                )
+            except ValueError:
+                break
+        else:
+            if not pairs:
+                break
+            _, term = pairs[slot % len(pairs)]
+            try:
+                questions.append(_from_sentence(qtype, term, sentences))
+            except ValueError:
+                continue
+        slot += 1
+
+    if not questions and filled:
+        # Material too short for even one question — fall back to cloze quiz
+        for term in [t for _, t in pairs[:2]]:
+            sentence = _sentence_with(sentences, term)
+            if sentence is not None:
+                questions.append(
+                    _from_sentence("fill_blank", term, sentences)
+                )
+    return questions[:question_count]

@@ -23,6 +23,14 @@ class Settings(BaseSettings):
     database_url: str = 'sqlite:///./spidey.db'
     cors_origins: str = '*'
 
+    # Exam Mode evaluation criteria (configurable here; surfaced in every result).
+    # Subjective (short/paragraph/essay) answers are graded by an LLM when enabled,
+    # otherwise a deterministic keyword-overlap fallback is used.
+    exam_eval_ai_subjective: bool = True
+    exam_eval_strictness: str = 'balanced'   # lenient | balanced | strict
+    exam_eval_partial_credit: bool = True
+    exam_eval_penalize_unsupported: bool = True
+
 
 settings = Settings()
 

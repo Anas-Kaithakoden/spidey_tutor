@@ -163,6 +163,7 @@ def generate_chat_reply(
     max_material_chars: int = 40000,
 ) -> str:
     """Answer the last user message, grounded in the study material."""
+
     truncated = material_text[:max_material_chars]
 
     system = (
@@ -202,3 +203,11 @@ def available_models() -> list[dict]:
     except Exception:
         logger.debug("Ollama unreachable")
         return []
+
+
+def generate_json(
+    system: str, user: str, model_name: str, temperature: float = 0.3
+) -> dict:
+    """Generic strict-JSON completion (used by Exam Mode prompts)."""
+    raw = _chat_json(model_name, system, user, temperature=temperature)
+    return _robust_parse(raw)
