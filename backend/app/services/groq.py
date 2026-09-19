@@ -67,6 +67,16 @@ def generate_study_notes(
     )
 
 
+def generate_formula_sheet(
+    material_text: str,
+    model_name: str = "",
+    language: str = "en",
+) -> dict:
+    return openai_compat.generate_formula_sheet(
+        _ready_cfg(), material_text, _model(model_name), language=language
+    )
+
+
 def generate_chat_reply(
     material_text: str,
     history: list[dict],

@@ -102,6 +102,18 @@ def generate_formula_sheet(
                 ),
             )
             data = _robust_json_loads(resp.text)
+        elif provider == "groq":
+            from app.services import groq
+
+            data = groq.generate_formula_sheet(
+                truncated, model_name=model_name, language=language
+            )
+        elif provider == "openrouter":
+            from app.services import openrouter
+
+            data = openrouter.generate_formula_sheet(
+                truncated, model_name=model_name, language=language
+            )
         elif provider == "quick":
             # quick: split material into sentences and fake formulas
             sentences = [s.strip() for s in truncated.split(".") if len(s.strip()) > 20][:10]

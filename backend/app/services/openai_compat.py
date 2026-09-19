@@ -329,6 +329,36 @@ def generate_study_notes(
     return chat_json(cfg, model_name, system, f"Study material:\n{truncated}")
 
 
+def generate_formula_sheet(
+    cfg: CompatConfig,
+    material_text: str,
+    model_name: str,
+    *,
+    language: str = "en",
+    max_material_chars: int = 40000,
+) -> dict:
+    """Extract formulas/equations/definitions as strict JSON."""
+    truncated = material_text[:max_material_chars]
+    system = (
+        "You are a formula sheet generator for a study tool.\n"
+        "Extract all important formulas, equations, laws, and key definitions "
+        "from the material.\n"
+        "Rules:\n"
+        "- Find 8-15 most important formulas/equations.\n"
+        "- For each: title (short), formula (plain text or LaTeX-like, e.g. "
+        "E=mc^2, F=ma), description (1 sentence), category (e.g. Algebra, "
+        "Physics, OS).\n"
+        "- If the material has no explicit formulas, extract key "
+        "definitions/theorems as formula-like entries.\n"
+        "- Keep the formula concise and the description clear.\n"
+        + _language_instruction(language, json_output=True)
+        + 'Respond with STRICT JSON only matching: '
+        '{"formulas": [{"title": string, "formula": string, '
+        '"description": string, "category": string}]}'
+    )
+    return chat_json(cfg, model_name, system, f"Study material:\n{truncated}")
+
+
 def generate_chat_reply(
     cfg: CompatConfig,
     material_text: str,
