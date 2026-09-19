@@ -13,16 +13,11 @@ interface Props {
 export function AudioPlayer({ data, speed = 1 }: Props & { speed?: number }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [useBrowserTTS, setUseBrowserTTS] = useState(false);
 
   const hasGeminiAudio = !!data?.audio_base64;
   const src = hasGeminiAudio
     ? `data:${data.mime_type};base64,${data.audio_base64}`
     : null;
-
-  useEffect(() => {
-    setUseBrowserTTS(!hasGeminiAudio && !!data);
-  }, [hasGeminiAudio, data]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;

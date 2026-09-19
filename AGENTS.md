@@ -8,9 +8,10 @@ Hackathon study app: upload material (PDF/text) → AI generates quizzes & flash
   `..\.venv\Scripts\python -m uvicorn app.main:app --reload --port 8000`
 - Frontend proxies `/api/*` → `http://127.0.0.1:8000` via `next.config.ts` rewrites (`BACKEND_URL` overrides the target).
 
-## Verification (no test suite exists)
+## Verification
 - `npm run lint` → `npx tsc --noEmit` → `npm run build` (all must pass)
-- Backend: from `backend/`, `..\.venv\Scripts\python -c "from app.main import app"`
+- Backend tests: from `backend/`, `..\.venv\Scripts\python -m unittest discover -s tests`
+- Backend import: from `backend/`, `..\.venv\Scripts\python -c "from app.main import app"`
 - Live check: `GET /api/models`, then one quiz + flashcard generation through the UI.
 
 ## Backend gotchas
@@ -18,7 +19,11 @@ Hackathon study app: upload material (PDF/text) → AI generates quizzes & flash
 - No migration tool; tables auto-create on startup. **Schema change → delete `backend/spidey.db`** to regenerate.
 - Request/response shapes defined once in `app/schemas.py`; every route returns `response_model=...`.
 - PyMuPDF is imported as `import pymupdf` (NOT `fitz`).
-- New AI provider = new module in `app/services/` + one `provider` branch in `app/services/ai.py` + a row in `/api/models` (`app/main.py`).
+- New AI provider = new module in `app/services/` + one `provider` branch in `app/services/ai.py` + a row in
+  `/api/models` (`app/main.py`). OpenAI-compatible providers (Groq, OpenRouter) share the generic helper in
+  `app/services/openai_compat.py` (httpx-based chat completions with robust JSON parsing); don't declare a new HTTP
+  client per call — reuse `httpx` there. Provider keys (`GROQ_API_KEY`, `OPENROUTER_API_KEY`) live in `backend/.env`
+  only. Free OpenRouter model IDs must stay env-configurable (`OPENROUTER_FREE_MODELS`), never hard-coded.
 
 ## AI gotchas
 - Any provider failure silently returns `seed.py` mock data (`generated_by: "mock"`, toast in UI) — a "working" endpoint may be serving mocks. Check backend logs for exceptions.

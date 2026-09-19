@@ -9,7 +9,7 @@ from app.database import Base, engine
 from app.models import ChatMessage, Material  # noqa: F401 (ensure models are registered)
 from app.routers import analytics, audio, chat, flashcards, materials, quizzes, study_notes
 from app.schemas import HealthOut, ModelInfo, ModelsOut
-from app.services import ollama
+from app.services import groq, ollama, openrouter
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,6 +25,14 @@ async def lifespan(app: FastAPI):
     if not settings.gemini_api_key:
         logger.warning(
             "GEMINI_API_KEY is not set. AI features will fall back to mock data."
+        )
+    if not settings.groq_api_key:
+        logger.warning(
+            "GROQ_API_KEY is not set. Groq models will fall back to mock data."
+        )
+    if not settings.openrouter_api_key:
+        logger.warning(
+            "OPENROUTER_API_KEY is not set. OpenRouter models will fall back to mock data."
         )
     yield
 
@@ -88,6 +96,24 @@ def list_models():
     else:
         providers.append(
             ModelInfo(provider="ollama", name="qwen3:8b", label="Local (unreachable)")
+        )
+
+    # Groq — OpenAI-compatible cloud provider
+    if settings.groq_api_key:
+        providers.extend(ModelInfo(**m) for m in groq.list_models())
+    else:
+        providers.extend(
+            ModelInfo(**{**m, "label": f"{m['label']} (no API key)"})
+            for m in groq.list_models()
+        )
+
+    # OpenRouter — OpenAI-compatible aggregator with free models
+    if settings.openrouter_api_key:
+        providers.extend(ModelInfo(**m) for m in openrouter.list_models())
+    else:
+        providers.extend(
+            ModelInfo(**{**m, "label": f"{m['label']} (no API key)"})
+            for m in openrouter.list_models()
         )
 
     # Quick — deterministic local generation, always available, no API call

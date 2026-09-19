@@ -85,25 +85,27 @@ class QuickChatReplyTests(unittest.TestCase):
 
 class ChatDispatchTests(unittest.TestCase):
     def test_quick_stamps_and_grounded(self):
-        generated_by, reply = generate_chat_reply(
+        generated_by, reply, error_detail = generate_chat_reply(
             MATERIAL,
             [{"role": "user", "content": "What is a hash table?"}],
             provider="quick",
         )
         self.assertEqual(generated_by, "quick")
+        self.assertEqual(error_detail, "")
         self.assertIn("hash table", reply.lower())
 
     def test_unknown_provider_falls_back_to_mock_still_grounded(self):
-        generated_by, reply = generate_chat_reply(
+        generated_by, reply, error_detail = generate_chat_reply(
             MATERIAL,
             [{"role": "user", "content": "What is binary search?"}],
             provider="bogus",
         )
         self.assertEqual(generated_by, "mock")
+        self.assertTrue(error_detail)
         self.assertIn("binary search", reply.lower())
 
     def test_mock_fallback_says_unavailable_for_foreign_topic(self):
-        generated_by, reply = generate_chat_reply(
+        generated_by, reply, _ = generate_chat_reply(
             MATERIAL,
             [{"role": "user", "content": "Who wrote Hamlet?"}],
             provider="bogus",
@@ -112,7 +114,7 @@ class ChatDispatchTests(unittest.TestCase):
         self.assertIn("uploaded material", reply.lower())
 
     def test_empty_material_is_handled_gracefully(self):
-        generated_by, reply = generate_chat_reply(
+        generated_by, reply, _ = generate_chat_reply(
             "", [{"role": "user", "content": "Hello?"}], provider="quick"
         )
         self.assertEqual(generated_by, "quick")

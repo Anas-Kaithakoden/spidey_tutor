@@ -48,7 +48,7 @@ def create_flashcards(payload: CreateFlashcards, db: Session = Depends(get_db)):
     db.query(Flashcard).filter(Flashcard.material_id == material.id).delete()
     db.flush()
 
-    _, cards = ai_generate_flashcards(
+    _, cards, _ = ai_generate_flashcards(
         material.content,
         count=8,
         provider=payload.provider,

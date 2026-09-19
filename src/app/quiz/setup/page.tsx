@@ -71,7 +71,8 @@ export default function QuizSetup() {
       setActiveQuiz(quiz);
       if (quiz.generated_by === "mock") {
         toast.info(
-          "Using sample questions (add your Gemini API key for AI-generated ones)."
+          quiz.warning ??
+            `Showing sample questions — AI generation via ${model.provider} failed. Check the backend .env.`
         );
       } else if (quiz.generated_by === "quick") {
         toast.info("Quick Mode: questions generated deterministically, no AI call.");

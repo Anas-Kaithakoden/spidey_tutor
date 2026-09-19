@@ -2,9 +2,17 @@ import logging
 
 from app.config import settings
 from app.seed import MOCK_FLASHCARDS, MOCK_QUESTIONS, MOCK_STUDY_NOTES
-from app.services import gemini, ollama, quick
+from app.services import gemini, groq, ollama, openrouter, quick
+from app.services.openai_compat import ProviderError
 
 logger = logging.getLogger(__name__)
+
+
+def _error_detail(provider: str, exc: Exception) -> str:
+    """A safe, user-facing reason a provider/generation failed."""
+    if isinstance(exc, ProviderError) and exc.user_message:
+        return exc.user_message
+    return f"{provider} generation failed: {exc}"
 
 
 def _normalize_question(item: dict) -> dict:
@@ -38,8 +46,13 @@ def generate_quiz(
     question_count: int,
     provider: str = "gemini",
     model_name: str = "",
-) -> tuple[str, list[dict]]:
-    """Generate quiz questions. Returns (generated_by, questions)."""
+) -> tuple[str, list[dict], str]:
+    """Generate quiz questions. Returns (generated_by, questions, error_detail).
+
+    ``error_detail`` is a user-safe reason string, non-empty only when the
+    generation fell back to mock data.
+    """
+    error_detail = ""
     try:
         success_tag = "ai"
         if provider == "quick":
@@ -53,20 +66,25 @@ def generate_quiz(
         elif provider == "gemini":
             name = model_name or settings.gemini_model
             raw = gemini.generate_quiz_raw(material_text, difficulty, question_count, name)
+        elif provider == "groq":
+            raw = groq.generate_quiz(material_text, difficulty, question_count, model_name)
+        elif provider == "openrouter":
+            raw = openrouter.generate_quiz(material_text, difficulty, question_count, model_name)
         else:
             raise ValueError(f"Unknown provider: {provider}")
 
         questions = [_normalize_question(q) for q in raw]
         if not questions:
             raise ValueError("No questions generated")
-        return success_tag, questions
+        return success_tag, questions, error_detail
 
     except Exception as exc:
+        error_detail = _error_detail(provider, exc)
         logger.exception(
             "Quiz generation failed (provider=%s, model=%s): %s",
             provider, model_name, exc,
         )
-        return "mock", [dict(q) for q in MOCK_QUESTIONS[:question_count]]
+        return "mock", [dict(q) for q in MOCK_QUESTIONS[:question_count]], error_detail
 
 
 def generate_flashcards(
@@ -74,8 +92,13 @@ def generate_flashcards(
     count: int = 8,
     provider: str = "gemini",
     model_name: str = "",
-) -> tuple[str, list[dict]]:
-    """Generate flashcards. Returns (generated_by, flashcards)."""
+) -> tuple[str, list[dict], str]:
+    """Generate flashcards. Returns (generated_by, flashcards, error_detail).
+
+    ``error_detail`` is a user-safe reason string, non-empty only when the
+    generation fell back to mock data.
+    """
+    error_detail = ""
     try:
         success_tag = "ai"
         if provider == "quick":
@@ -87,20 +110,25 @@ def generate_flashcards(
         elif provider == "gemini":
             name = model_name or settings.gemini_model
             raw = gemini.generate_flashcards_raw(material_text, count, name)
+        elif provider == "groq":
+            raw = groq.generate_flashcards(material_text, count, model_name)
+        elif provider == "openrouter":
+            raw = openrouter.generate_flashcards(material_text, count, model_name)
         else:
             raise ValueError(f"Unknown provider: {provider}")
 
         cards = [_normalize_flashcard(c) for c in raw]
         if not cards:
             raise ValueError("No flashcards generated")
-        return success_tag, cards
+        return success_tag, cards, error_detail
 
     except Exception as exc:
+        error_detail = _error_detail(provider, exc)
         logger.exception(
             "Flashcard generation failed (provider=%s, model=%s): %s",
             provider, model_name, exc,
         )
-        return "mock", [dict(c) for c in MOCK_FLASHCARDS[:count]]
+        return "mock", [dict(c) for c in MOCK_FLASHCARDS[:count]], error_detail
 
 
 def _normalize_study_notes(item: dict) -> dict:
@@ -152,8 +180,13 @@ def generate_study_notes(
     material_text: str,
     provider: str = "gemini",
     model_name: str = "",
-) -> tuple[str, dict]:
-    """Generate study notes. Returns (generated_by, notes dict)."""
+) -> tuple[str, dict, str]:
+    """Generate study notes. Returns (generated_by, notes dict, error_detail).
+
+    ``error_detail`` is a user-safe reason string, non-empty only when the
+    generation fell back to mock data.
+    """
+    error_detail = ""
     try:
         success_tag = "ai"
         if provider == "quick":
@@ -165,18 +198,23 @@ def generate_study_notes(
         elif provider == "gemini":
             name = model_name or settings.gemini_model
             raw = gemini.generate_study_notes_raw(material_text, name)
+        elif provider == "groq":
+            raw = groq.generate_study_notes(material_text, model_name)
+        elif provider == "openrouter":
+            raw = openrouter.generate_study_notes(material_text, model_name)
         else:
             raise ValueError(f"Unknown provider: {provider}")
 
         notes = _normalize_study_notes(raw)
-        return success_tag, notes
+        return success_tag, notes, error_detail
 
     except Exception as exc:
+        error_detail = _error_detail(provider, exc)
         logger.exception(
             "Study notes generation failed (provider=%s, model=%s): %s",
             provider, model_name, exc,
         )
-        return "mock", dict(MOCK_STUDY_NOTES)
+        return "mock", dict(MOCK_STUDY_NOTES), error_detail
 
 
 def generate_chat_reply(
@@ -184,18 +222,21 @@ def generate_chat_reply(
     history: list[dict],
     provider: str = "gemini",
     model_name: str = "",
-) -> tuple[str, str]:
+) -> tuple[str, str, str]:
     """Generate a chat reply grounded in the material.
+
+    Returns (generated_by, reply_text, error_detail) — ``error_detail`` is a
+    user-safe reason string, non-empty only for the fallback path.
 
     ``history`` is the conversation so far (oldest first, ending with the
     current user question) as ``{"role": ..., "content": ...}`` dicts.
-    Returns (generated_by, reply_text).
 
     The fallback deliberately reuses ``quick.generate_chat_reply`` (rather
     than generic ``seed.py`` content): a chat answer about a specific upload
     must never surface unrelated general knowledge as if it came from the
     material, so even mock replies stay grounded in the text.
     """
+    error_detail = ""
     try:
         success_tag = "ai"
         if provider == "quick":
@@ -207,17 +248,22 @@ def generate_chat_reply(
         elif provider == "gemini":
             name = model_name or settings.gemini_model
             raw = gemini.generate_chat_reply_raw(material_text, history, name)
+        elif provider == "groq":
+            raw = groq.generate_chat_reply(material_text, history, model_name)
+        elif provider == "openrouter":
+            raw = openrouter.generate_chat_reply(material_text, history, model_name)
         else:
             raise ValueError(f"Unknown provider: {provider}")
 
         reply = str(raw).strip()
         if not reply:
             raise ValueError("Empty chat reply")
-        return success_tag, reply
+        return success_tag, reply, error_detail
 
     except Exception as exc:
+        error_detail = _error_detail(provider, exc)
         logger.exception(
             "Chat reply generation failed (provider=%s, model=%s): %s",
             provider, model_name, exc,
         )
-        return "mock", quick.generate_chat_reply(material_text, history)
+        return "mock", quick.generate_chat_reply(material_text, history), error_detail

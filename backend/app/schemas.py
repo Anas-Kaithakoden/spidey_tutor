@@ -35,6 +35,7 @@ class QuizOut(BaseModel):
     provider: str
     model_name: str
     questions: list[QuestionBrief]
+    warning: str | None = None
 
 
 class CreateQuiz(BaseModel):
@@ -114,6 +115,7 @@ class StudyNotesOut(BaseModel):
     provider: str
     model_name: str
     created_at: datetime
+    warning: str | None = None
 
 
 class ModelInfo(BaseModel):
@@ -225,3 +227,4 @@ class CreateChatMessage(BaseModel):
 class ChatReplyOut(BaseModel):
     user_message: ChatMessageOut
     assistant_message: ChatMessageOut
+    warning: str | None = None

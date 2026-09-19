@@ -2,7 +2,8 @@ import base64
 import logging
 
 from app.config import settings
-from app.services import gemini, ollama
+from app.services import gemini, groq, ollama, openrouter
+from app.services.openai_compat import chat_text
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,19 @@ def generate_summary_text(
             summary = str(data.get("summary", "")).strip()
             if not summary:
                 raise ValueError("Empty summary from ollama")
+            return "ai", summary
+        elif provider in ("groq", "openrouter"):
+            system = (
+                f"You are a study assistant. Summarize into {SUMMARY_WORD_TARGET} spoken paragraph. "
+                "Return only the summary text, no markdown, no JSON."
+            )
+            module = groq if provider == "groq" else openrouter
+            cfg = module._ready_cfg()
+            name = model_name or cfg.default_model
+            summary = chat_text(cfg, name, system, prompt, temperature=0.7)
+            summary = summary.strip()
+            if not summary:
+                raise ValueError(f"Empty summary from {provider}")
             return "ai", summary
         else:
             # gemini text generation

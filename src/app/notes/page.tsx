@@ -65,7 +65,8 @@ export default function Notes() {
       setNotes(generated);
       if (generated.generated_by === "mock") {
         toast.info(
-          "Using sample notes (add your Gemini API key for AI-generated ones)."
+          generated.warning ??
+            `Showing sample notes — AI generation via ${model.provider} failed. Check the backend .env.`
         );
       } else if (generated.generated_by === "quick") {
         toast.info("Quick Mode: notes generated deterministically, no AI call.");
@@ -212,8 +213,8 @@ export default function Notes() {
 
           {notes.generated_by === "mock" && (
             <p className="text-center text-xs text-muted-foreground">
-              Sample notes shown — add your Gemini API key for AI-generated
-              ones.
+              Sample notes shown — AI generation via {notes.provider} failed
+              (check backend logs / .env).
             </p>
           )}
 
