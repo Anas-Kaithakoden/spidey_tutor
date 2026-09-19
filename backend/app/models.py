@@ -30,6 +30,9 @@ class Material(Base):
     exams: Mapped[list["Exam"]] = relationship(
         back_populates="material", cascade="all, delete-orphan"
     )
+    podcasts: Mapped[list["PodcastEpisode"]] = relationship(
+        back_populates="material", cascade="all, delete-orphan"
+    )
 
 
 class Quiz(Base):
@@ -138,6 +141,36 @@ class ChatMessage(Base):
     )
 
     material: Mapped[Material] = relationship(back_populates="chat_messages")
+
+
+class PodcastEpisode(Base):
+    """A generated Study Podcast episode.
+
+    The structured script (``lines``) is always persisted so the episode never
+    needs full regeneration; ``audio_path``/``audio_status`` describe whether
+    spoken audio exists on disk (Gemini TTS) or still needs it (provider key
+    missing or synthesis failed).
+    """
+
+    __tablename__ = "podcast_episodes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    material_id: Mapped[int] = mapped_column(ForeignKey("materials.id"))
+    title: Mapped[str] = mapped_column(String(255))
+    mode: Mapped[str] = mapped_column(String(16))
+    duration_minutes: Mapped[int] = mapped_column(Integer)
+    focus_topic: Mapped[str] = mapped_column(Text, default="")
+    lines: Mapped[list] = mapped_column(JSON, default=list)
+    generated_by: Mapped[str] = mapped_column(String(8), default="mock")
+    provider: Mapped[str] = mapped_column(String(16), default="gemini")
+    model_name: Mapped[str] = mapped_column(String(64), default="")
+    audio_status: Mapped[str] = mapped_column(String(16), default="unavailable")
+    audio_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow
+    )
+
+    material: Mapped[Material] = relationship(back_populates="podcasts")
 
 
 class Exam(Base):

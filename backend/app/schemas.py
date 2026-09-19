@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -312,4 +313,72 @@ class ExamResultOut(BaseModel):
     grading_method: str  # deterministic | hybrid | fallback
     generated_by: str
     criteria_used: dict
+    warning: str | None = None
+
+
+# ---------------------------------------------------------------------------
+# Study Podcast
+# ---------------------------------------------------------------------------
+
+PodcastMode = Literal["learn", "revise", "exam_prep", "weak_topics"]
+
+PODCAST_MODES = ("learn", "revise", "exam_prep", "weak_topics")
+PODCAST_MAX_DURATION_MINUTES = 10
+
+
+class CreatePodcast(BaseModel):
+    material_id: int
+    title: str | None = None
+    mode: PodcastMode = "learn"
+    duration_minutes: int = Field(default=5, ge=1, le=PODCAST_MAX_DURATION_MINUTES)
+    focus_topic: str = ""
+    provider: str = "gemini"
+    model_name: str = ""
+
+    @field_validator("focus_topic")
+    @classmethod
+    def focus_topic_trimmed(cls, v: str) -> str:
+        return (v or "").strip()
+
+    @field_validator("mode")
+    @classmethod
+    def mode_supported(cls, v: str) -> str:
+        if v not in PODCAST_MODES:
+            raise ValueError(
+                f"Unsupported podcast mode '{v}'. Choose one of "
+                + ", ".join(PODCAST_MODES)
+                + "."
+            )
+        return v
+
+
+class PodcastScriptLine(BaseModel):
+    speaker: Literal["host_one", "host_two"]
+    text: str
+
+    @field_validator("text")
+    @classmethod
+    def text_not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Dialogue line cannot be blank.")
+        return v
+
+
+class PodcastEpisodeOut(BaseModel):
+    id: int
+    material_id: int
+    material_title: str = ""
+    title: str
+    mode: str
+    duration_minutes: int
+    focus_topic: str = ""
+    lines: list[PodcastScriptLine]
+    generated_by: str  # ai | quick | mock
+    provider: str
+    model_name: str
+    audio_status: str  # ready | unavailable | error
+    has_audio: bool
+    audio_url: str | None = None
+    created_at: datetime
     warning: str | None = None

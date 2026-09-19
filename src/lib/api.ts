@@ -485,3 +485,74 @@ export function submitExam(
 export function getExamResult(examId: number): Promise<ExamResult> {
   return request<ExamResult>(`/exams/${examId}/result`);
 }
+
+export type PodcastMode = "learn" | "revise" | "exam_prep" | "weak_topics";
+
+export const PODCAST_DURATIONS = [2, 5, 7, 10];
+export const PODCAST_MAX_DURATION_MINUTES = 10;
+
+export interface PodcastScriptLine {
+  speaker: "host_one" | "host_two";
+  text: string;
+}
+
+export interface CreatePodcastPayload {
+  material_id: number;
+  title?: string;
+  mode: PodcastMode;
+  duration_minutes: number;
+  focus_topic?: string;
+  provider: string;
+  model_name: string;
+}
+
+export type PodcastAudioStatus = "ready" | "unavailable" | "error";
+
+export interface PodcastEpisode {
+  id: number;
+  material_id: number;
+  material_title: string;
+  title: string;
+  mode: PodcastMode;
+  duration_minutes: number;
+  focus_topic: string;
+  lines: PodcastScriptLine[];
+  generated_by: "ai" | "mock" | "quick";
+  provider: string;
+  model_name: string;
+  audio_status: PodcastAudioStatus;
+  has_audio: boolean;
+  audio_url: string | null;
+  created_at: string;
+  warning?: string | null;
+}
+
+export function listPodcasts(materialId?: number): Promise<PodcastEpisode[]> {
+  const qs = materialId ? `?material_id=${materialId}` : "";
+  return request<PodcastEpisode[]>(`/podcasts${qs}`);
+}
+
+export function createPodcast(
+  payload: CreatePodcastPayload
+): Promise<PodcastEpisode> {
+  return request<PodcastEpisode>("/podcasts", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getPodcast(episodeId: number): Promise<PodcastEpisode> {
+  return request<PodcastEpisode>(`/podcasts/${episodeId}`);
+}
+
+export function deletePodcast(episodeId: number): Promise<void> {
+  return request<void>(`/podcasts/${episodeId}`, { method: "DELETE" });
+}
+
+export function regeneratePodcastAudio(
+  episodeId: number
+): Promise<PodcastEpisode> {
+  return request<PodcastEpisode>(`/podcasts/${episodeId}/audio`, {
+    method: "POST",
+  });
+}

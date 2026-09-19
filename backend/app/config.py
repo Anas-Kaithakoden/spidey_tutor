@@ -31,6 +31,14 @@ class Settings(BaseSettings):
     exam_eval_partial_credit: bool = True
     exam_eval_penalize_unsupported: bool = True
 
+    # Study Podcast settings. TTS uses Gemini's prebuilt voices; the two host
+    # voices are configurable (see https://ai.google.dev/gemini-api/docs/speech)
+    # and stay env-driven so teams can swap them without code changes.
+    podcast_max_duration_minutes: int = 10   # hard cap enforced in the API too
+    podcast_voice_host_one: str = 'Kore'
+    podcast_voice_host_two: str = 'Puck'
+    podcast_media_dir: str = 'media/podcasts'   # relative to backend/
+
 
 settings = Settings()
 
