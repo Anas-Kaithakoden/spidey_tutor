@@ -25,27 +25,27 @@ def generate_summary_text(
     if is_ml:
         prompt = (
             "You are a friendly Malayalam tutor recording a 1-minute voice note in Malayalam.\n"
-            "Explain the material in natural spoken Malayalam (മലയാളം) as if talking to a friend — warm, expressive, high/low pitch variation.\n"
+            "Explain ONLY this material in natural spoken Malayalam (മലയാളം) as if talking to a friend — warm, expressive, high/low pitch variation.\n"
             f"Rules:\n"
             f"- Exactly {SUMMARY_WORD_TARGET} in Malayalam, one flowing paragraph, spoken style\n"
             "- Start naturally like \"ഓക്കേ, ഒരു മിനിറ്റിൽ പറയാം —\" or \"ശരി, ഇതാ ചുരുക്കം...\"\n"
             "- Use natural Malayalam contractions, short sentences, expressive pauses.\n"
-            "- Cover key concepts with emphasis and engaging tone, dramatic but clear.\n"
-            "- No asterisks, no English headings, no markup — pure spoken Malayalam (keep technical terms like A*, Minimax in English inside Malayalam sentence if needed).\n"
-            "- Ignore formatting noise (***). End with encouraging close like \"ഇത്രയേ ഉള്ളൂ — നിനക്ക് പറ്റും!\"\n\n"
+            "- Cover ONLY the key concepts FROM THIS MATERIAL with emphasis and engaging tone, dramatic but clear. Do NOT add topics not in the material.\n"
+            "- No asterisks, no English headings, no markup — pure spoken Malayalam (keep any technical terms exactly as in material).\n"
+            "- Ignore formatting noise (***). Do NOT mix with previous uploads. End with encouraging close like \"ഇത്രയേ ഉള്ളൂ — നിനക്ക് പറ്റും!\"\n\n"
             f"Study material:\n{truncated}"
         )
     else:
         prompt = (
             "You are a friendly study buddy recording a highly expressive 1-minute voice note.\n"
-            "Explain the material as if you're on a podcast — dramatic, warm, high-energy, with clear high/low pitch swings.\n"
+            "Explain ONLY this material as if you're on a podcast — dramatic, warm, high-energy, with clear high/low pitch swings.\n"
             f"Rules:\n"
             f"- Exactly {SUMMARY_WORD_TARGET} (about 60 seconds), one flowing paragraph, ultra-expressive spoken style\n"
             "- Start with a natural opener like \"Okay, here's the quick one-minute rundown —\" or \"Alright, imagine this...\"\n"
             "- Use contractions, very short punchy sentences, dramatic pauses, rising excitement on key ideas, soft calm on explanations.\n"
-            "- Vary tone: energetic highs, thoughtful lows, emphasize terms like A-star, Minimax, Alpha-Beta with vocal stress.\n"
+            "- Vary tone: energetic highs, thoughtful lows, emphasize ONLY the key terms FROM THIS MATERIAL with vocal stress. Do NOT hallucinate terms like A-star/Minimax unless they are in the material.\n"
             "- No asterisks, no bullet points, no headings, no syllabus codes — just pure spoken English.\n"
-            "- Ignore formatting noise (***). End with encouraging close like \"And that's the core — you've got this!\"\n\n"
+            "- Use ONLY this material. Do NOT combine with previous files. Ignore formatting noise (***). End with encouraging close like \"And that's the core — you've got this!\"\n\n"
             f"Study material:\n{truncated}"
         )
 
@@ -138,14 +138,15 @@ def generate_tts_audio(
         if language.lower().startswith("ml"):
             styled = (
                 "Speak in warm, highly expressive Malayalam with dynamic high/low pitch, "
-                "dramatic emphasis, clear pauses, energetic and friendly — in Malayalam:\n\n" + text
+                "dramatic emphasis on the key terms present in the text, clear pauses, energetic and friendly — in Malayalam. "
+                "Do not add new topics:\n\n" + text
             )
         else:
             styled = (
                 "Speak in a highly expressive, warm tutor voice with dramatic high/low pitch variation — "
                 "high and excited on key discoveries, low and thoughtful on explanations, "
-                "strong emphasis on terms like A-star, Minimax, Alpha-Beta, with natural breaths and pauses. "
-                "Be very engaging and lively:\n\n" + text
+                "strong emphasis on the key terms that actually appear in the text, with natural breaths and pauses. "
+                "Do not add terms not in the text. Be very engaging and lively:\n\n" + text
             )
         resp = client.models.generate_content(
             model=model_name,
