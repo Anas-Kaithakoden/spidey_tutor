@@ -324,4 +324,3 @@ export function clearChat(materialId: number): Promise<void> {
     method: "DELETE",
   });
 }
-}
