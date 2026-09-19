@@ -17,6 +17,7 @@ def _to_out(m: Material) -> MaterialOut:
         title=m.title,
         content=m.content,
         source_type=m.source_type,
+        source_url=m.source_url,
         char_count=len(m.content),
         word_count=len(m.content.split()),
         created_at=m.created_at,

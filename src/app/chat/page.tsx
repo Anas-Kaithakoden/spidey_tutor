@@ -19,6 +19,7 @@ import {
   FileText,
   Loader2,
   MessageCircle,
+  PlaySquare,
   Send,
   Trash2,
   Type,
@@ -183,7 +184,9 @@ export default function Chat() {
       <Card size="sm" className="mb-4 shrink-0">
         <CardContent className="flex items-center gap-3 pt-3">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-            {material.source_type === "pdf" ? (
+            {material.source_type === "youtube" ? (
+              <PlaySquare className="size-4 text-muted-foreground" />
+            ) : material.source_type === "pdf" ? (
               <FileText className="size-4 text-muted-foreground" />
             ) : (
               <Type className="size-4 text-muted-foreground" />

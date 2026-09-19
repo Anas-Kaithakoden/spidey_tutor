@@ -2,7 +2,7 @@
 
 **Hackathon project — a study buddy that turns lecture material into quizzes and flashcards.**
 
-Upload a PDF or paste text → pick a quiz difficulty, question count, timer, and **AI model** → take the quiz → review your answers → create flashcards to study the key concepts.
+Upload a PDF, paste text, or drop a YouTube link → pick a quiz difficulty, question count, timer, and **AI model** → take the quiz → review your answers → create flashcards to study the key concepts.
 
 Built with **Next.js (TypeScript + Tailwind + shadcn/ui)** on the frontend and **FastAPI (Python)** on the backend, with pluggable AI providers (**Gemini**, **Groq**, **OpenRouter**, or **local Ollama**).
 
@@ -88,9 +88,11 @@ Browser (Next.js on :3000)
    ▼
 FastAPI (on :8000)
    │
-   ├─ POST /api/materials     → PyMuPDF extracts text from PDFs
-   ├─ POST /api/quizzes       → AI generates questions (provider selected in UI)
-   ├─ POST /api/flashcards    → AI generates flashcards (provider selected in UI)
+   ├─ POST /api/materials       → saves pasted text study material
+   ├─ POST /api/materials/pdf   → PyMuPDF extracts text from PDFs
+   ├─ POST /api/materials/youtube → server-side YouTube transcript/captions become source material
+   ├─ POST /api/quizzes          → AI generates questions (provider selected in UI)
+   ├─ POST /api/flashcards       → AI generates flashcards (provider selected in UI)
    │
    ├─ GET/POST/DELETE /api/chat → grounded chat with a material (question/answer history)
    │
@@ -163,6 +165,7 @@ All endpoints live under `/api`. From the frontend they are proxied automaticall
 | `GET` | `/api/models` | — | Available models `{ providers: [{ provider, name, label }] }` (Gemini, Groq, OpenRouter, Ollama, Quick) |
 | `POST` | `/api/materials` | `{ title?, text }` | Save pasted study material |
 | `POST` | `/api/materials/pdf` | `multipart` file | Save PDF, text extracted via PyMuPDF |
+| `POST` | `/api/materials/youtube` | `{ url, title? }` | Save a YouTube video's transcript/captions as study material (`source_type: "youtube"`, `source_url` preserved). Returns `400` for non-YouTube/invalid URLs, `422` when the video has no retrievable transcript |
 | `GET` | `/api/materials/{id}` | — | Fetch material + word/char counts |
 | `POST` | `/api/quizzes` | `{ material_id, difficulty, question_count, timer_enabled, timer_minutes, provider, model_name }` | Generate + save a quiz |
 | `GET` | `/api/quizzes/{id}` | — | Quiz questions (correct answers hidden) |

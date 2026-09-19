@@ -8,19 +8,43 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Upload, FileText, ArrowRight, Loader2, Image as ImageIcon, FileSpreadsheet } from "lucide-react";
+import {
+  Upload,
+  FileText,
+  ArrowRight,
+  Loader2,
+  Image as ImageIcon,
+  FileSpreadsheet,
+  Video,
+} from "lucide-react";
 import { useStudy } from "@/lib/context";
-import { createMaterial, uploadPdf, uploadImage, uploadOffice } from "@/lib/api";
+import {
+  createMaterial,
+  createYoutubeMaterial,
+  uploadPdf,
+  uploadImage,
+  uploadOffice,
+} from "@/lib/api";
+
+function isYoutubeUrl(value: string): boolean {
+  return /^(https?:\/\/)?(www\.|m\.|music\.)?(youtube\.com|youtu\.be)\//i.test(
+    value.trim()
+  );
+}
 
 export default function AddMaterial() {
   const router = useRouter();
   const { setMaterial } = useStudy();
-  const [tab, setTab] = useState<"text" | "pdf" | "image" | "office">("text");
+  const [tab, setTab] = useState<
+    "text" | "pdf" | "image" | "office" | "youtube"
+  >("text");
   const [text, setText] = useState("");
   const [title, setTitle] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [officeFile, setOfficeFile] = useState<File | null>(null);
+  const [ytUrl, setYtUrl] = useState("");
+  const [ytTitle, setYtTitle] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -41,6 +65,12 @@ export default function AddMaterial() {
       } else if (tab === "office" && officeFile) {
         const material = await uploadOffice(officeFile);
         setMaterial(material);
+      } else if (tab === "youtube") {
+        const material = await createYoutubeMaterial(
+          ytUrl.trim(),
+          ytTitle.trim() || undefined
+        );
+        setMaterial(material);
       }
       router.push("/preview");
     } catch (err) {
@@ -50,21 +80,24 @@ export default function AddMaterial() {
     }
   }
 
+  const ytUrlEmpty = ytUrl.trim().length === 0;
+  const ytUrlInvalid = !ytUrlEmpty && !isYoutubeUrl(ytUrl);
   const canContinue = submitting
     ? false
     : (tab === "text" && text.trim().length > 0) ||
       (tab === "pdf" && pdfFile !== null) ||
       (tab === "image" && imageFile !== null) ||
-      (tab === "office" && officeFile !== null);
+      (tab === "office" && officeFile !== null) ||
+      (tab === "youtube" && !ytUrlEmpty && !ytUrlInvalid);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
       <h1 className="mb-2 text-2xl font-bold">Add Study Material</h1>
       <p className="mb-8 text-muted-foreground">
-        Paste text or upload PDF, image, or office docs (docx, pptx, xlsx).
+        Paste text, upload a PDF, image, or office doc, or add a YouTube video.
       </p>
 
-      <div className="mb-6 grid grid-cols-2 gap-2 rounded-lg border p-1 sm:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-2 rounded-lg border p-1 sm:grid-cols-3 lg:grid-cols-5">
         <button
           onClick={() => setTab("text")}
           disabled={submitting}
@@ -112,6 +145,18 @@ export default function AddMaterial() {
         >
           <FileSpreadsheet className="size-4" />
           Office
+        </button>
+        <button
+          onClick={() => setTab("youtube")}
+          disabled={submitting}
+          className={`flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 ${
+            tab === "youtube"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-muted"
+          }`}
+        >
+          <Video className="size-4" />
+          YouTube
         </button>
       </div>
 
@@ -211,7 +256,7 @@ export default function AddMaterial() {
                 onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
               />
             </div>
-          ) : (
+          ) : tab === "office" ? (
             <div key="office" className="space-y-4">
               <div
                 onClick={() => officeInputRef.current?.click()}
@@ -244,6 +289,46 @@ export default function AddMaterial() {
                 className="hidden"
                 onChange={(e) => setOfficeFile(e.target.files?.[0] ?? null)}
               />
+            </div>
+          ) : (
+            <div key="youtube" className="space-y-3">
+              <Label htmlFor="yt-url">YouTube video URL</Label>
+              <Input
+                id="yt-url"
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=..."
+                value={ytUrl}
+                onChange={(e) => setYtUrl(e.target.value)}
+              />
+              {ytUrlInvalid && (
+                <p className="text-xs text-destructive">
+                  That doesn&apos;t look like a YouTube video URL. Use a
+                  youtube.com or youtu.be link.
+                </p>
+              )}
+              {!ytUrlInvalid && ytUrl.trim().length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  We&apos;ll fetch the video&apos;s captions and turn them into
+                  study material.
+                </p>
+              )}
+              <Label htmlFor="yt-title">
+                Title{" "}
+                <span className="text-muted-foreground">
+                  (optional — defaults to the video title)
+                </span>
+              </Label>
+              <Input
+                id="yt-title"
+                placeholder="e.g. Operating Systems - Lecture 3"
+                value={ytTitle}
+                onChange={(e) => setYtTitle(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Only videos with captions or an auto-generated transcript can be
+                processed. If a video has no transcript, we&apos;ll let you know
+                instead of making one up.
+              </p>
             </div>
           )}
         </CardContent>

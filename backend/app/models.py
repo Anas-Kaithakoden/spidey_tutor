@@ -13,6 +13,7 @@ class Material(Base):
     title: Mapped[str] = mapped_column(String(255))
     content: Mapped[str] = mapped_column(Text)
     source_type: Mapped[str] = mapped_column(String(16))
+    source_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow
     )

@@ -13,9 +13,15 @@ class MaterialOut(BaseModel):
     title: str
     content: str
     source_type: str
+    source_url: str | None = None
     char_count: int
     word_count: int
     created_at: datetime
+
+
+class CreateYoutubeMaterial(BaseModel):
+    url: str = Field(min_length=1)
+    title: str | None = None
 
 
 class QuestionBrief(BaseModel):

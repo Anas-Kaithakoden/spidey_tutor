@@ -7,7 +7,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import Base, engine
 from app.models import ChatMessage, Material  # noqa: F401 (ensure models are registered)
-from app.routers import analytics, audio, chat, flashcards, materials, quizzes, study_notes
+from app.routers import (
+    analytics,
+    audio,
+    chat,
+    flashcards,
+    materials,
+    quizzes,
+    study_notes,
+    youtube_materials,
+)
 from app.schemas import HealthOut, ModelInfo, ModelsOut
 from app.services import groq, ollama, openrouter
 
@@ -57,6 +66,7 @@ app.include_router(audio.router)
 app.include_router(study_notes.router)
 app.include_router(chat.router)
 app.include_router(analytics.router)
+app.include_router(youtube_materials.router)
 
 
 @app.get("/api/health", response_model=HealthOut)

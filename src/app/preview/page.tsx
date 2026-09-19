@@ -6,7 +6,7 @@ import { useStudy } from "@/lib/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, FileText, Loader2, MessageCircle, NotebookPen, Type, Volume2 } from "lucide-react";
+import { ArrowRight, ExternalLink, FileText, Loader2, MessageCircle, NotebookPen, PlaySquare, Type, Volume2 } from "lucide-react";
 import { generateAudioSummary, type AudioSummaryOut } from "@/lib/api";
 import { AudioPlayer } from "@/components/audio-player";
 import { toast } from "sonner";
@@ -45,7 +45,9 @@ export default function Preview() {
         <CardContent className="pt-6">
           <div className="mb-4 flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-lg bg-muted">
-              {type === "pdf" ? (
+              {type === "youtube" ? (
+                <PlaySquare className="size-5 text-muted-foreground" />
+              ) : type === "pdf" ? (
                 <FileText className="size-5 text-muted-foreground" />
               ) : (
                 <Type className="size-5 text-muted-foreground" />
@@ -55,7 +57,7 @@ export default function Preview() {
               <h2 className="font-semibold">{material.title}</h2>
               <div className="flex flex-wrap gap-2">
                 <Badge variant="secondary" className="text-xs">
-                  {type.toUpperCase()}
+                  {type === "youtube" ? "YouTube video" : type.toUpperCase()}
                 </Badge>
                 <Badge variant="secondary" className="text-xs">
                   {material.word_count.toLocaleString()} words
@@ -63,6 +65,18 @@ export default function Preview() {
                 <Badge variant="secondary" className="text-xs">
                   {material.char_count.toLocaleString()} chars
                 </Badge>
+                {type === "youtube" && material.source_url && (
+                  <a
+                    href={material.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+                  >
+                    <PlaySquare className="size-3" />
+                    Open video
+                    <ExternalLink className="size-3" />
+                  </a>
+                )}
               </div>
             </div>
           </div>

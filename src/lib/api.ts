@@ -4,7 +4,16 @@ export interface Material {
   id: number;
   title: string;
   content: string;
-  source_type: "text" | "pdf" | "image" | "docx" | "pptx" | "xlsx" | "office";
+source_type:
+    | "text"
+    | "pdf"
+    | "image"
+    | "docx"
+    | "pptx"
+    | "xlsx"
+    | "office"
+    | "youtube";
+  source_url?: string | null;
   char_count: number;
   word_count: number;
 }
@@ -162,6 +171,16 @@ export function uploadOffice(file: File): Promise<Material> {
   return request<Material>("/materials/office", {
     method: "POST",
     body: form,
+  });
+}
+
+export function createYoutubeMaterial(
+  url: string,
+  title?: string
+): Promise<Material> {
+  return request<Material>("/materials/youtube", {
+    method: "POST",
+    body: JSON.stringify({ url, title }),
   });
 }
 
