@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -25,6 +25,9 @@ class Material(Base):
         back_populates="material", cascade="all, delete-orphan"
     )
     chat_messages: Mapped[list["ChatMessage"]] = relationship(
+        back_populates="material", cascade="all, delete-orphan"
+    )
+    exams: Mapped[list["Exam"]] = relationship(
         back_populates="material", cascade="all, delete-orphan"
     )
 
@@ -135,3 +138,92 @@ class ChatMessage(Base):
     )
 
     material: Mapped[Material] = relationship(back_populates="chat_messages")
+
+
+class Exam(Base):
+    """A generated exam: a configured set of mixed-type questions."""
+
+    __tablename__ = "exams"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    material_id: Mapped[int] = mapped_column(ForeignKey("materials.id"))
+    title: Mapped[str] = mapped_column(String(255))
+    difficulty: Mapped[str] = mapped_column(String(16))
+    question_count: Mapped[int] = mapped_column(Integer)
+    duration_minutes: Mapped[int] = mapped_column(Integer, default=30)
+    generated_by: Mapped[str] = mapped_column(String(8), default="mock")
+    provider: Mapped[str] = mapped_column(String(16), default="gemini")
+    model_name: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow
+    )
+
+    material: Mapped[Material] = relationship(back_populates="exams")
+    questions: Mapped[list["ExamQuestion"]] = relationship(
+        back_populates="exam",
+        cascade="all, delete-orphan",
+        order_by="ExamQuestion.sort_order",
+    )
+    attempts: Mapped[list["ExamAttempt"]] = relationship(
+        back_populates="exam", cascade="all, delete-orphan"
+    )
+
+
+class ExamQuestion(Base):
+    __tablename__ = "exam_questions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    exam_id: Mapped[int] = mapped_column(ForeignKey("exams.id"))
+    question_type: Mapped[str] = mapped_column(String(16))
+    question: Mapped[str] = mapped_column(Text)
+    options: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    correct_answer: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    accepted_answer: Mapped[str] = mapped_column(Text, default="")
+    key_points: Mapped[list] = mapped_column(JSON, default=list)
+    explanation: Mapped[str] = mapped_column(Text, default="")
+    max_score: Mapped[int] = mapped_column(Integer, default=1)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+
+    exam: Mapped[Exam] = relationship(back_populates="questions")
+
+
+class ExamAttempt(Base):
+    __tablename__ = "exam_attempts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    exam_id: Mapped[int] = mapped_column(ForeignKey("exams.id"))
+    answers: Mapped[list] = mapped_column(JSON, default=list)
+    time_taken_seconds: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow
+    )
+
+    exam: Mapped[Exam] = relationship(back_populates="attempts")
+    evaluation: Mapped["ExamEvaluation | None"] = relationship(
+        back_populates="attempt", cascade="all, delete-orphan", uselist=False
+    )
+
+
+class ExamEvaluation(Base):
+    __tablename__ = "exam_evaluations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    attempt_id: Mapped[int] = mapped_column(
+        ForeignKey("exam_attempts.id"), unique=True
+    )
+    total_score: Mapped[float] = mapped_column(Float)
+    max_score: Mapped[int] = mapped_column(Integer)
+    percentage: Mapped[float] = mapped_column(Float)
+    summary: Mapped[str] = mapped_column(Text, default="")
+    strengths: Mapped[list] = mapped_column(JSON, default=list)
+    weak_areas: Mapped[list] = mapped_column(JSON, default=list)
+    topics_to_improve: Mapped[list] = mapped_column(JSON, default=list)
+    recommendations: Mapped[list] = mapped_column(JSON, default=list)
+    question_reviews: Mapped[list] = mapped_column(JSON, default=list)
+    grading_method: Mapped[str] = mapped_column(String(16), default="hybrid")
+    criteria: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow
+    )
+
+    attempt: Mapped[ExamAttempt] = relationship(back_populates="evaluation")

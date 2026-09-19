@@ -121,6 +121,121 @@ MOCK_FLASHCARDS = [
     },
 ]
 
+MOCK_EXAM_QUESTIONS = [
+    {
+        "question_type": "mcq",
+        "question": "What is the time complexity of binary search?",
+        "options": ["O(n)", "O(log n)", "O(n^2)", "O(1)"],
+        "correct_answer": 1,
+        "explanation": (
+            "Binary search halves the search space with each step, "
+            "resulting in O(log n) time complexity."
+        ),
+    },
+    {
+        "question_type": "short_answer",
+        "question": "What does DNS stand for and what is its purpose?",
+        "accepted_answer": (
+            "DNS stands for Domain Name System; it translates "
+            "human-readable domain names into IP addresses."
+        ),
+        "explanation": (
+            "The source material describes DNS as the Domain Name System "
+            "that translates domain names into IP addresses."
+        ),
+    },
+    {
+        "question_type": "fill_blank",
+        "question": (
+            "A stack follows ______ ordering: the last element pushed is "
+            "the first one popped."
+        ),
+        "accepted_answer": "LIFO",
+        "explanation": "The material describes stacks as LIFO structures.",
+    },
+    {
+        "question_type": "paragraph",
+        "question": (
+            "Explain the difference between TCP and UDP and when each "
+            "would be preferred."
+        ),
+        "accepted_answer": (
+            "TCP is connection-oriented and ensures reliable, ordered "
+            "delivery; UDP is connectionless and faster but does not "
+            "guarantee delivery or ordering. Use TCP for web browsing and "
+            "UDP for real-time streaming."
+        ),
+        "key_points": [
+            "TCP is connection-oriented and reliable",
+            "UDP is connectionless and faster",
+            "UDP does not guarantee delivery or ordering",
+        ],
+        "explanation": (
+            "The material contrasts the reliability of TCP with the "
+            "speed of UDP."
+        ),
+    },
+    {
+        "question_type": "essay",
+        "question": (
+            "Discuss the role of normalization in database design, "
+            "including what problem it solves and how it improves data "
+            "integrity."
+        ),
+        "accepted_answer": (
+            "Normalization organizes a database to reduce redundancy and "
+            "improve data integrity by splitting large tables into smaller, "
+            "related ones. It removes duplicate data and prevents update "
+            "anomalies."
+        ),
+        "key_points": [
+            "Reduces redundancy",
+            "Improves data integrity",
+            "Splits large tables into smaller related ones",
+        ],
+        "explanation": (
+            "The material defines normalization as the process of "
+            "organizing the database to reduce redundancy and improve "
+            "integrity."
+        ),
+    },
+    {
+        "question_type": "mcq",
+        "question": "Which protocol is used for secure web browsing?",
+        "options": ["HTTP", "FTP", "HTTPS", "SMTP"],
+        "correct_answer": 2,
+        "explanation": (
+            "HTTPS adds TLS encryption to HTTP, ensuring secure "
+            "communication between browser and server."
+        ),
+    },
+    {
+        "question_type": "short_answer",
+        "question": "What is a deadlock in concurrent systems?",
+        "accepted_answer": (
+            "A deadlock occurs when two or more processes are blocked "
+            "forever, each waiting on the other to proceed."
+        ),
+        "explanation": (
+            "The material defines deadlock as processes blocked forever, "
+            "each waiting on the other."
+        ),
+    },
+    {
+        "question_type": "fill_blank",
+        "question": (
+            "______ is the smallest unit of execution within a process, "
+            "and multiple of them share memory and resources."
+        ),
+        "accepted_answer": "A thread",
+        "explanation": (
+            "The material describes a thread as the smallest unit of "
+            "execution within a process."
+        ),
+    },
+]
+
+
 MOCK_STUDY_NOTES = {
     "title": "Computer Science Fundamentals — Study Notes",
     "summary": (

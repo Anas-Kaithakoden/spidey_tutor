@@ -23,6 +23,9 @@ export function Navbar() {
           <Button render={<Link href="/flashcards" />} variant="ghost" size="sm" nativeButton={false}>
             Flashcards
           </Button>
+          <Button render={<Link href="/exam/setup" />} variant="ghost" size="sm" nativeButton={false}>
+            Exam
+          </Button>
           <Button render={<Link href="/chat" />} variant="ghost" size="sm" nativeButton={false}>
             Chat
           </Button>

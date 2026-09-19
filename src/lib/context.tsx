@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, type ReactNode } from "react";
-import type { Material, Quiz, QuizResult } from "./api";
+import type { Exam, ExamResult, Material, Quiz, QuizResult } from "./api";
 
 interface ModelOption {
   provider: string;
@@ -36,6 +36,13 @@ interface QuizConfig {
   timerMinutes: number;
 }
 
+export interface ExamConfig {
+  difficulty: "easy" | "medium" | "hard";
+  questionCount: number;
+  durationMinutes: number;
+  title: string;
+}
+
 interface StudyContextType {
   material: Material | null;
   setMaterial: (m: Material) => void;
@@ -45,6 +52,12 @@ interface StudyContextType {
   setActiveQuiz: (q: Quiz | null) => void;
   quizResult: QuizResult | null;
   setQuizResult: (r: QuizResult | null) => void;
+  examConfig: ExamConfig;
+  setExamConfig: (c: ExamConfig) => void;
+  activeExam: Exam | null;
+  setActiveExam: (e: Exam | null) => void;
+  examResult: ExamResult | null;
+  setExamResult: (r: ExamResult | null) => void;
   model: ModelOption;
   setModel: (m: ModelOption) => void;
 }
@@ -61,6 +74,14 @@ export function StudyProvider({ children }: { children: ReactNode }) {
   });
   const [activeQuiz, setActiveQuiz] = useState<Quiz | null>(null);
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
+  const [examConfig, setExamConfig] = useState<ExamConfig>({
+    difficulty: "medium",
+    questionCount: 8,
+    durationMinutes: 20,
+    title: "",
+  });
+  const [activeExam, setActiveExam] = useState<Exam | null>(null);
+  const [examResult, setExamResult] = useState<ExamResult | null>(null);
   const [model, setModelState] = useState<ModelOption>(loadModel);
 
   function setModel(m: ModelOption) {
@@ -79,6 +100,12 @@ export function StudyProvider({ children }: { children: ReactNode }) {
         setActiveQuiz,
         quizResult,
         setQuizResult,
+        examConfig,
+        setExamConfig,
+        activeExam,
+        setActiveExam,
+        examResult,
+        setExamResult,
         model,
         setModel,
       }}
