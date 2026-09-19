@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ArrowRight, Clock, Loader2 } from "lucide-react";
-import { createQuiz } from "@/lib/api";
+import { createQuiz, getMaterial } from "@/lib/api";
 import { ModelSelect } from "@/components/model-select";
 
 const difficulties = [
@@ -23,7 +23,7 @@ const timerOptions = [5, 10, 15, 20];
 
 export default function QuizSetup() {
   const router = useRouter();
-  const { material, quizConfig, setQuizConfig, setActiveQuiz, model } = useStudy();
+  const { material, setMaterial, quizConfig, setQuizConfig, setActiveQuiz, model } = useStudy();
   const [difficulty, setDifficulty] = useState(quizConfig.difficulty);
   const [questionCount, setQuestionCount] = useState(quizConfig.questionCount);
   const [timerEnabled, setTimerEnabled] = useState(quizConfig.timerEnabled);
@@ -31,7 +31,25 @@ export default function QuizSetup() {
   const [generating, setGenerating] = useState(false);
 
   async function handleStart() {
-    if (!material) {
+    const params = new URLSearchParams(window.location.search);
+    const materialId = Number(params.get("material_id"));
+
+    let currentMaterial = material;
+    if (materialId && (!currentMaterial || currentMaterial.id !== materialId)) {
+      setGenerating(true);
+      try {
+        currentMaterial = await getMaterial(materialId);
+        setMaterial(currentMaterial);
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : "Failed to load material."
+        );
+        setGenerating(false);
+        return;
+      }
+    }
+
+    if (!currentMaterial) {
       toast.error("Add study material first.");
       router.push("/add");
       return;
@@ -42,7 +60,7 @@ export default function QuizSetup() {
       const config = { difficulty, questionCount, timerEnabled, timerMinutes };
       setQuizConfig(config);
       const quiz = await createQuiz({
-        material_id: material.id,
+        material_id: currentMaterial.id,
         difficulty: config.difficulty,
         question_count: config.questionCount,
         timer_enabled: config.timerEnabled,
@@ -55,6 +73,8 @@ export default function QuizSetup() {
         toast.info(
           "Using sample questions (add your Gemini API key for AI-generated ones)."
         );
+      } else if (quiz.generated_by === "quick") {
+        toast.info("Quick Mode: questions generated deterministically, no AI call.");
       }
       router.push("/quiz");
     } catch (err) {

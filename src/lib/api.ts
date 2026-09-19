@@ -22,7 +22,7 @@ export interface Quiz {
   question_count: number;
   timer_enabled: boolean;
   timer_minutes: number;
-  generated_by: "ai" | "mock";
+  generated_by: "ai" | "mock" | "quick";
   questions: QuizQuestionBrief[];
 }
 
@@ -42,7 +42,7 @@ export interface QuizResult {
   total: number;
   percentage: number;
   answers: (number | null)[];
-  generated_by: "ai" | "mock";
+  generated_by: "ai" | "mock" | "quick";
   reviews: QuestionReview[];
 }
 
@@ -50,6 +50,8 @@ export interface FlashcardOut {
   id: number;
   front: string;
   back: string;
+  provider: string;
+  model_name: string;
 }
 
 export interface CreateQuizPayload {
@@ -66,6 +68,29 @@ export interface ModelOption {
   provider: string;
   name: string;
   label: string;
+}
+
+export interface StudyNoteSection {
+  heading: string;
+  content: string;
+  bullet_points: string[];
+}
+
+export interface StudyNoteKeyConcept {
+  term: string;
+  definition: string;
+}
+
+export interface StudyNotes {
+  id: number;
+  material_id: number;
+  title: string;
+  summary: string;
+  sections: StudyNoteSection[];
+  key_concepts: StudyNoteKeyConcept[];
+  generated_by: "ai" | "mock" | "quick";
+  provider: string;
+  model_name: string;
 }
 
 export function getModels(): Promise<{ providers: ModelOption[] }> {
@@ -184,4 +209,119 @@ export function generateAudioSummary(
       language,
     }),
   });
+}
+
+export function getStudyNotes(
+  materialId: number
+): Promise<StudyNotes | null> {
+  return request<StudyNotes | null>(`/study-notes?material_id=${materialId}`);
+}
+
+export function generateStudyNotes(
+  materialId: number,
+  provider: string,
+  model_name: string
+): Promise<StudyNotes> {
+  return request<StudyNotes>("/study-notes", {
+    method: "POST",
+    body: JSON.stringify({ material_id: materialId, provider, model_name }),
+  });
+}
+
+export interface TopicPerformance {
+  material_id: number;
+  title: string;
+  quizzes_taken: number;
+  questions_answered: number;
+  correct: number;
+  average_score: number;
+  needs_practice: boolean;
+}
+
+export interface RecentActivity {
+  kind: "quiz" | "flashcards" | "material" | "notes";
+  title: string;
+  detail: string;
+  material_id: number | null;
+  created_at: string;
+}
+
+export interface ScoreTrendPoint {
+  label: string;
+  score: number;
+  created_at: string;
+  material_title: string;
+}
+
+export interface Analytics {
+  has_activity: boolean;
+  materials: number;
+  quizzes_completed: number;
+  questions_answered: number;
+  correct_answers: number;
+  incorrect_answers: number;
+  average_score: number;
+  best_score: number | null;
+  flashcards: number;
+  flashcards_reviewed: number;
+  study_sessions: number;
+  days_studied: number;
+  topics: TopicPerformance[];
+  score_trend: ScoreTrendPoint[];
+  recent_activity: RecentActivity[];
+}
+
+export function getAnalytics(): Promise<Analytics> {
+  return request<Analytics>("/analytics");
+}
+
+export function reviewFlashcard(
+  cardId: number
+): Promise<{ id: number; review_count: number }> {
+  return request<{ id: number; review_count: number }>(
+    `/flashcards/${cardId}/review`,
+    { method: "POST" }
+  );
+}
+
+export interface ChatMessage {
+  id: number;
+  material_id: number;
+  role: "user" | "assistant";
+  content: string;
+  generated_by: string;
+  created_at: string;
+}
+
+export interface ChatReply {
+  user_message: ChatMessage;
+  assistant_message: ChatMessage;
+}
+
+export function getChatMessages(materialId: number): Promise<ChatMessage[]> {
+  return request<ChatMessage[]>(`/chat?material_id=${materialId}`);
+}
+
+export function sendChatMessage(
+  materialId: number,
+  content: string,
+  provider: string,
+  model_name: string
+): Promise<ChatReply> {
+  return request<ChatReply>("/chat", {
+    method: "POST",
+    body: JSON.stringify({
+      material_id: materialId,
+      content,
+      provider,
+      model_name,
+    }),
+  });
+}
+
+export function clearChat(materialId: number): Promise<void> {
+  return request<void>(`/chat?material_id=${materialId}`, {
+    method: "DELETE",
+  });
+}
 }

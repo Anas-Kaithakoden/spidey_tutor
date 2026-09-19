@@ -120,3 +120,81 @@ MOCK_FLASHCARDS = [
         "back": "A thread is the smallest unit of execution within a process. Multiple threads within a process share memory and resources.",
     },
 ]
+
+MOCK_STUDY_NOTES = {
+    "title": "Computer Science Fundamentals — Study Notes",
+    "summary": (
+        "A concise reference covering core computer science topics: "
+        "data structures, operating systems, networking, and databases."
+    ),
+    "sections": [
+        {
+            "heading": "Data Structures",
+            "content": (
+                "Data structures organize and store data so it can be used efficiently. "
+                "The most common ones are hash tables, stacks, and trees."
+            ),
+            "bullet_points": [
+                "Hash tables map keys to values with O(1) average lookups.",
+                "Stacks follow LIFO ordering — the last element pushed is the first popped.",
+                "A primary key uniquely identifies each record in a database table.",
+            ],
+        },
+        {
+            "heading": "Operating Systems",
+            "content": (
+                "The operating system (OS) manages hardware resources and provides "
+                "an interface for applications. Two key OS concepts are the process "
+                "and the scheduler."
+            ),
+            "bullet_points": [
+                "A process is a program in execution, including its code, activity, and resources.",
+                "The scheduler allocates CPU time to processes.",
+                "Deadlock occurs when processes are blocked forever, each waiting on the other.",
+                "A thread is the smallest unit of execution inside a process.",
+            ],
+        },
+        {
+            "heading": "Networking & Security",
+            "content": (
+                "Networking connects computers so they can exchange data. DNS and "
+                "HTTPS are two foundational pieces."
+            ),
+            "bullet_points": [
+                "DNS translates human-readable domain names into IP addresses.",
+                "HTTPS adds TLS encryption to HTTP for secure web communication.",
+                "TCP is reliable and ordered; UDP is faster but does not guarantee delivery.",
+            ],
+        },
+        {
+            "heading": "Software Engineering & Databases",
+            "content": (
+                "Software engineering practices and database design keep systems "
+                "reliable, maintainable, and fast."
+            ),
+            "bullet_points": [
+                "CI/CD automates integration, testing, and deployment of code changes.",
+                "Normalization reduces redundancy and improves data integrity.",
+                "Recursion is a technique where a function calls itself with a base case to stop.",
+            ],
+        },
+    ],
+    "key_concepts": [
+        {
+            "term": "Hash table",
+            "definition": "A data structure mapping keys to values with O(1) average lookup, insert, and delete.",
+        },
+        {
+            "term": "Process",
+            "definition": "A program in execution, including code, current activity, and allocated resources.",
+        },
+        {
+            "term": "DNS",
+            "definition": "Domain Name System — translates domain names into IP addresses.",
+        },
+        {
+            "term": "Normalization",
+            "definition": "Organizing a database to reduce redundancy and improve data integrity.",
+        },
+    ],
+}

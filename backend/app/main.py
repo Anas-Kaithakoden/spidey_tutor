@@ -6,8 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import Base, engine
-from app.models import Material  # noqa: F401 (ensure models are registered)
-from app.routers import audio, flashcards, materials, quizzes
+from app.models import ChatMessage, Material  # noqa: F401 (ensure models are registered)
+from app.routers import analytics, audio, chat, flashcards, materials, quizzes, study_notes
 from app.schemas import HealthOut, ModelInfo, ModelsOut
 from app.services import ollama
 
@@ -46,6 +46,9 @@ app.include_router(materials.router)
 app.include_router(quizzes.router)
 app.include_router(flashcards.router)
 app.include_router(audio.router)
+app.include_router(study_notes.router)
+app.include_router(chat.router)
+app.include_router(analytics.router)
 
 
 @app.get("/api/health", response_model=HealthOut)
@@ -86,5 +89,14 @@ def list_models():
         providers.append(
             ModelInfo(provider="ollama", name="qwen3:8b", label="Local (unreachable)")
         )
+
+    # Quick — deterministic local generation, always available, no API call
+    providers.append(
+        ModelInfo(
+            provider="quick",
+            name="quick",
+            label="Quick (deterministic, no AI)",
+        )
+    )
 
     return ModelsOut(providers=providers)

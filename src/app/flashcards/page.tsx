@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useStudy } from "@/lib/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   ChevronLeft,
   ChevronRight,
@@ -16,6 +17,7 @@ import {
 import {
   generateFlashcards,
   getFlashcards,
+  reviewFlashcard,
   type FlashcardOut,
 } from "@/lib/api";
 import { ModelSelect } from "@/components/model-select";
@@ -60,7 +62,11 @@ export default function Flashcards() {
       setCards(generated);
       setCurrent(0);
       setFlipped(false);
-      toast.success("Flashcards generated!");
+      if (generated.length && generated[0].provider === "quick") {
+        toast.info("Quick Mode: flashcards generated deterministically, no AI call.");
+      } else {
+        toast.success("Flashcards generated!");
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to generate flashcards.");
     } finally {
@@ -98,6 +104,12 @@ export default function Flashcards() {
           : "Your flashcards are saved alongside your study material."}
       </p>
 
+      {cards.length > 0 && cards[0].provider === "quick" && (
+        <Badge variant="secondary" className="mb-4">
+          Quick Mode — no AI call
+        </Badge>
+      )}
+
       {loading ? (
         <div className="flex flex-col items-center justify-center py-24">
           <Loader2 className="mb-4 size-6 animate-spin text-muted-foreground" />
@@ -133,7 +145,14 @@ export default function Flashcards() {
         <>
           {/* Card */}
           <div
-            onClick={() => setFlipped(!flipped)}
+            onClick={() => {
+              if (!flipped) {
+                reviewFlashcard(card.id).catch(() => {
+                  // tracking is best-effort; never block the review flow
+                });
+              }
+              setFlipped(!flipped);
+            }}
             className="mb-8 cursor-pointer"
             style={{ perspective: "1000px" }}
           >

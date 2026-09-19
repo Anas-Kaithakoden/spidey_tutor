@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class CreateMaterial(BaseModel):
@@ -82,6 +82,38 @@ class FlashcardOut(BaseModel):
     id: int
     front: str
     back: str
+    provider: str
+    model_name: str
+
+
+class CreateStudyNotes(BaseModel):
+    material_id: int
+    provider: str = "gemini"
+    model_name: str = ""
+
+
+class StudyNoteSection(BaseModel):
+    heading: str
+    content: str
+    bullet_points: list[str] = []
+
+
+class StudyNoteKeyConcept(BaseModel):
+    term: str
+    definition: str
+
+
+class StudyNotesOut(BaseModel):
+    id: int
+    material_id: int
+    title: str
+    summary: str
+    sections: list[StudyNoteSection]
+    key_concepts: list[StudyNoteKeyConcept]
+    generated_by: str
+    provider: str
+    model_name: str
+    created_at: datetime
 
 
 class ModelInfo(BaseModel):
@@ -116,3 +148,80 @@ class AudioSummaryOut(BaseModel):
     generated_by: str
     provider: str
     model_name: str
+
+
+class FlashcardReviewOut(BaseModel):
+    id: int
+    review_count: int
+
+
+class TopicPerformance(BaseModel):
+    material_id: int
+    title: str
+    quizzes_taken: int
+    questions_answered: int
+    correct: int
+    average_score: int
+    needs_practice: bool
+
+
+class RecentActivity(BaseModel):
+    kind: str
+    title: str
+    detail: str
+    material_id: int | None
+    created_at: datetime
+
+
+class ScoreTrendPoint(BaseModel):
+    label: str
+    score: int
+    created_at: datetime
+    material_title: str
+
+
+class AnalyticsOut(BaseModel):
+    has_activity: bool
+    materials: int
+    quizzes_completed: int
+    questions_answered: int
+    correct_answers: int
+    incorrect_answers: int
+    average_score: int
+    best_score: int | None
+    flashcards: int
+    flashcards_reviewed: int
+    study_sessions: int
+    days_studied: int
+    topics: list[TopicPerformance]
+    score_trend: list[ScoreTrendPoint]
+    recent_activity: list[RecentActivity]
+
+
+class ChatMessageOut(BaseModel):
+    id: int
+    material_id: int
+    role: str
+    content: str
+    generated_by: str
+    created_at: datetime
+
+
+class CreateChatMessage(BaseModel):
+    material_id: int
+    content: str = Field(min_length=1, max_length=4000)
+    provider: str = "gemini"
+    model_name: str = ""
+
+    @field_validator("content")
+    @classmethod
+    def content_not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Message cannot be blank.")
+        return v
+
+
+class ChatReplyOut(BaseModel):
+    user_message: ChatMessageOut
+    assistant_message: ChatMessageOut

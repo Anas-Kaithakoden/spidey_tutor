@@ -23,6 +23,9 @@ class Material(Base):
     flashcards: Mapped[list["Flashcard"]] = relationship(
         back_populates="material", cascade="all, delete-orphan"
     )
+    chat_messages: Mapped[list["ChatMessage"]] = relationship(
+        back_populates="material", cascade="all, delete-orphan"
+    )
 
 
 class Quiz(Base):
@@ -96,5 +99,38 @@ class Flashcard(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow
     )
+    review_count: Mapped[int] = mapped_column(Integer, default=0)
 
     material: Mapped[Material] = relationship(back_populates="flashcards")
+
+
+class StudyNote(Base):
+    __tablename__ = "study_notes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    material_id: Mapped[int] = mapped_column(ForeignKey("materials.id"))
+    title: Mapped[str] = mapped_column(String(255))
+    summary: Mapped[str] = mapped_column(Text, default="")
+    sections: Mapped[list] = mapped_column(JSON, default=list)
+    key_concepts: Mapped[list] = mapped_column(JSON, default=list)
+    generated_by: Mapped[str] = mapped_column(String(8), default="mock")
+    provider: Mapped[str] = mapped_column(String(16), default="gemini")
+    model_name: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow
+    )
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    material_id: Mapped[int] = mapped_column(ForeignKey("materials.id"))
+    role: Mapped[str] = mapped_column(String(16))
+    content: Mapped[str] = mapped_column(Text)
+    generated_by: Mapped[str] = mapped_column(String(8), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow
+    )
+
+    material: Mapped[Material] = relationship(back_populates="chat_messages")

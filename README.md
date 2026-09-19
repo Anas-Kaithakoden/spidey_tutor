@@ -77,6 +77,9 @@ Home → Add Material (PDF/text) → Material Preview → Quiz Setup (difficulty
     → Quiz (timer + progress) → Results (score + review) → Flashcards
 ```
 
+You can also open a **chat with your material** at any point after uploading — ask questions
+and the AI answers strictly from the uploaded text, saying so when an answer isn't in the material.
+
 ### Architecture
 
 ```text
@@ -88,6 +91,8 @@ FastAPI (on :8000)
    ├─ POST /api/materials     → PyMuPDF extracts text from PDFs
    ├─ POST /api/quizzes       → AI generates questions (provider selected in UI)
    ├─ POST /api/flashcards    → AI generates flashcards (provider selected in UI)
+   │
+   ├─ GET/POST/DELETE /api/chat → grounded chat with a material (question/answer history)
    │
    ▼
 SQLAlchemy ──► SQLite (dev, default) / PostgreSQL (via DATABASE_URL)
@@ -114,7 +119,8 @@ AI routing:
 │   │   ├── quiz/setup/         #     Quiz configuration
 │   │   ├── quiz/page.tsx       #     Quiz screen
 │   │   ├── quiz/results/       #     Quiz results + review
-│   │   └── flashcards/         #     Flashcard deck
+│   │   ├── flashcards/         #     Flashcard deck
+│   │   └── chat/               #     Ask questions about your material
 │   ├── components/
 │   │   ├── ui/                 #     shadcn/ui components (managed by CLI)
 │   │   ├── navbar.tsx
@@ -132,7 +138,7 @@ AI routing:
 │   │   ├── models.py           #   SQLAlchemy ORM models (tables)
 │   │   ├── schemas.py          #   Pydantic request/response models
 │   │   ├── seed.py             #   mock quiz/flashcard fallback data
-│   │   ├── routers/            #   API endpoints (materials, quizzes, flashcards)
+│   │   ├── routers/            #   API endpoints (materials, quizzes, flashcards, chat)
 │   │   └── services/           #   PDF extraction, Gemini, Ollama, AI dispatcher
 │   ├── requirements.txt
 │   ├── .env.example
@@ -160,6 +166,13 @@ All endpoints live under `/api`. From the frontend they are proxied automaticall
 | `POST` | `/api/quizzes/{id}/submit` | `{ answers: (int\|null)[], time_taken_seconds }` | Score + full review |
 | `GET` | `/api/flashcards?material_id={id}` | — | Saved flashcards for a material |
 | `POST` | `/api/flashcards` | `{ material_id, provider, model_name }` | Generate (and replace) flashcards |
+| `GET` | `/api/study-notes?material_id={id}` | — | Saved study notes for a material (`null` if none) |
+| `POST` | `/api/study-notes` | `{ material_id, provider, model_name }` | Generate (and replace) structured study notes |
+| `GET` | `/api/chat?material_id={id}` | — | Full conversation history for a material |
+| `POST` | `/api/chat` | `{ material_id, content, provider, model_name }` | Save the question + generate a grounded AI answer (returns both) |
+| `DELETE` | `/api/chat?material_id={id}` | — | Clear the conversation for a material |
+| `GET` | `/api/analytics` | — | Study progress: quizzes, average score, accuracy, flashcard reviews, study sessions, performance by topic, score trend, recent activity |
+| `POST` | `/api/flashcards/{id}/review` | — | Count one flashcard review (tracks `review_count`, feeds the analytics dashboard) |
 
 **Convention: request/response payloads are defined once in `backend/app/schemas.py` and typed once in `src/lib/api.ts`. When you add an endpoint, update both.**
 
@@ -187,6 +200,9 @@ Models come from two sources and are chosen **per session in the UI** (persisted
 |---|---|---|---|
 | `gemini` | `GEMINI_API_KEY` in `backend/.env` | `gemini-2.5-flash` (set `GEMINI_MODEL`) | Cloud |
 | `ollama` | Ollama running on `:11434` | anything pulled, e.g. `qwen3:8b` | Local, free, offline |
+| `quick` | nothing | `quick` | **Quick Mode** — deterministic local generation (no API call) |
+
+**Quick Mode:** pick "Quick (deterministic, no AI)" in the AI Model dropdown. Generation runs server-side with pure Python (term frequency + sentence analysis) — cloze quizzes, term-definition flashcards, and sectioned study notes — always drawn from the uploaded material. The same input + configuration always produces the same output, never hits an external API, and responses are stamped `generated_by: "quick"` so the UI can badge them separately from LLM (`"ai"`) and mock-fallback (`"mock"`) content.
 
 Generation flow:
 

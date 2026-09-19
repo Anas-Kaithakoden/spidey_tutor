@@ -3,14 +3,27 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Flashcard, Material
-from app.schemas import CreateFlashcards, FlashcardOut
+from app.schemas import (
+    CreateFlashcards,
+    FlashcardOut,
+    FlashcardReviewOut,
+)
 from app.services.ai import generate_flashcards as ai_generate_flashcards
 
 router = APIRouter(prefix="/api/flashcards", tags=["flashcards"])
 
 
 def _to_out(cards: list[Flashcard]) -> list[FlashcardOut]:
-    return [FlashcardOut(id=c.id, front=c.front, back=c.back) for c in cards]
+    return [
+        FlashcardOut(
+            id=c.id,
+            front=c.front,
+            back=c.back,
+            provider=c.provider,
+            model_name=c.model_name,
+        )
+        for c in cards
+    ]
 
 
 @router.get("", response_model=list[FlashcardOut])
@@ -59,3 +72,15 @@ def create_flashcards(payload: CreateFlashcards, db: Session = Depends(get_db)):
     for fc in saved:
         db.refresh(fc)
     return _to_out(saved)
+
+
+@router.post("/{card_id}/review", response_model=FlashcardReviewOut)
+def review_flashcard(card_id: int, db: Session = Depends(get_db)):
+    card = db.get(Flashcard, card_id)
+    if not card:
+        raise HTTPException(status_code=404, detail="Flashcard not found.")
+
+    card.review_count += 1
+    db.commit()
+    db.refresh(card)
+    return FlashcardReviewOut(id=card.id, review_count=card.review_count)
