@@ -38,6 +38,9 @@ export function Navbar() {
           <Button render={<Link href="/study-plan" />} variant="ghost" size="sm" nativeButton={false}>
             Plan
           </Button>
+          <Button render={<Link href="/formula-sheet" />} variant="ghost" size="sm" nativeButton={false}>
+            Formulas
+          </Button>
           <ThemeToggle />
         </nav>
       </div>

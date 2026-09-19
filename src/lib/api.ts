@@ -629,3 +629,56 @@ export function generateStudyPlanFromPdf(
     body: form,
   });
 }
+
+export interface FormulaItem {
+  title: string;
+  formula: string;
+  description: string;
+  category: string;
+}
+
+export interface FormulaSheet {
+  title: string;
+  description: string;
+  formulas: FormulaItem[];
+  generated_by: "ai" | "mock" | "quick";
+  provider: string;
+  model_name: string;
+  language: string;
+}
+
+export function generateFormulaSheet(payload: {
+  material_id?: number;
+  syllabus?: string;
+  provider: string;
+  model_name: string;
+  language?: string;
+}): Promise<FormulaSheet> {
+  return request<FormulaSheet>("/formula-sheet", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function downloadFormulaSheetPdf(payload: {
+  material_id?: number;
+  syllabus?: string;
+  provider: string;
+  model_name: string;
+  language?: string;
+}): Promise<Blob> {
+  const res = await fetch(`${API_BASE}/formula-sheet/pdf`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    let detail = `PDF failed (${res.status})`;
+    try {
+      const data = await res.json();
+      if (data?.detail) detail = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
+    } catch {}
+    throw new Error(detail);
+  }
+  return res.blob();
+}

@@ -437,3 +437,28 @@ class StudyPlanOut(BaseModel):
     provider: str
     model_name: str
     language: str
+
+
+class CreateFormulaSheet(BaseModel):
+    material_id: int | None = None
+    syllabus: str | None = None
+    provider: str = "gemini"
+    model_name: str = ""
+    language: str = "en"
+
+
+class FormulaItem(BaseModel):
+    title: str
+    formula: str
+    description: str
+    category: str = "General"
+
+
+class FormulaSheetOut(BaseModel):
+    title: str
+    description: str
+    formulas: list[FormulaItem]
+    generated_by: str
+    provider: str
+    model_name: str
+    language: str

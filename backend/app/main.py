@@ -20,6 +20,7 @@ from app.routers import (
     chat,
     exams,
     flashcards,
+    formula_sheet,
     materials,
     podcasts,
     quizzes,
@@ -80,6 +81,7 @@ app.include_router(analytics.router)
 app.include_router(youtube_materials.router)
 app.include_router(exams.router)
 app.include_router(study_plan.router)
+app.include_router(formula_sheet.router)
 
 
 @app.get("/api/health", response_model=HealthOut)
