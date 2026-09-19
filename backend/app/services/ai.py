@@ -6,6 +6,24 @@ from app.services import gemini, ollama, quick
 
 logger = logging.getLogger(__name__)
 
+# deprecated models that now 404 - auto-fix to current
+DEPRECATED_MODELS = {
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
+    "gemini-2.0-flash-lite",
+    "gemini-pro-latest",
+    "",
+}
+
+
+def _fix_model(name: str) -> str:
+    if not name or name in DEPRECATED_MODELS:
+        return settings.gemini_model
+    return name
+
 
 def _normalize_question(item: dict) -> dict:
     question = str(item.get("question", "")).strip()
@@ -51,7 +69,7 @@ def generate_quiz(
             name = model_name or "qwen3:8b"
             raw = ollama.generate_quiz(material_text, difficulty, question_count, name)
         elif provider == "gemini":
-            name = model_name or settings.gemini_model
+            name = _fix_model(model_name) if model_name else settings.gemini_model
             raw = gemini.generate_quiz_raw(material_text, difficulty, question_count, name)
         else:
             raise ValueError(f"Unknown provider: {provider}")
@@ -85,7 +103,7 @@ def generate_flashcards(
             name = model_name or "qwen3:8b"
             raw = ollama.generate_flashcards(material_text, count, name)
         elif provider == "gemini":
-            name = model_name or settings.gemini_model
+            name = _fix_model(model_name) if model_name else settings.gemini_model
             raw = gemini.generate_flashcards_raw(material_text, count, name)
         else:
             raise ValueError(f"Unknown provider: {provider}")
@@ -163,7 +181,7 @@ def generate_study_notes(
             name = model_name or "qwen3:8b"
             raw = ollama.generate_study_notes(material_text, name)
         elif provider == "gemini":
-            name = model_name or settings.gemini_model
+            name = _fix_model(model_name) if model_name else settings.gemini_model
             raw = gemini.generate_study_notes_raw(material_text, name)
         else:
             raise ValueError(f"Unknown provider: {provider}")
@@ -205,7 +223,7 @@ def generate_chat_reply(
             name = model_name or "qwen3:8b"
             raw = ollama.generate_chat_reply(material_text, history, name)
         elif provider == "gemini":
-            name = model_name or settings.gemini_model
+            name = _fix_model(model_name) if model_name else settings.gemini_model
             raw = gemini.generate_chat_reply_raw(material_text, history, name)
         else:
             raise ValueError(f"Unknown provider: {provider}")
