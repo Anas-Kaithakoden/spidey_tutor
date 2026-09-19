@@ -45,6 +45,43 @@ MOCK_PLAN = {
 }
 
 
+def _build_full_plan(
+    topics: list[str],
+    total_days: int,
+    start: date,
+    daily_hours: float,
+    day_offset: int = 0,
+) -> list[dict]:
+    """Deterministic day-by-day plan covering every day, cycling topics."""
+    items = [t.strip() for t in topics if t.strip()] or ["General Review"]
+    plan = []
+    for i in range(int(total_days)):
+        d = start + timedelta(days=i)
+        is_revision = (i + 1) % 4 == 0
+        topic = items[i % len(items)]
+        if is_revision:
+            plan.append({
+                "day": day_offset + i + 1,
+                "date": d.isoformat(),
+                "topic": f"Revision & Practice: {topic[:70]}",
+                "tasks": ["Revise topics covered so far", "Attempt practice questions", "Clear doubts"],
+                "focus": "Revision",
+                "duration_hours": float(daily_hours),
+                "revision": True,
+            })
+        else:
+            plan.append({
+                "day": day_offset + i + 1,
+                "date": d.isoformat(),
+                "topic": topic[:80],
+                "tasks": [f"Study {topic[:40]}", "Make notes/flashcards", "Practice 5 questions"],
+                "focus": "Understanding" if i % 3 == 0 else "Practice",
+                "duration_hours": float(daily_hours),
+                "revision": False,
+            })
+    return plan
+
+
 def generate_study_plan(
     syllabus: str,
     exam_date: str,
@@ -68,6 +105,7 @@ def generate_study_plan(
 
     truncated = syllabus[:35000]
     is_ml = language.lower().startswith("ml")
+    start = date.today() + timedelta(days=1)
 
     # Build language-specific prompt
     if is_ml:
@@ -77,7 +115,7 @@ def generate_study_plan(
             "Rules: 130-150 words total for tips, but plan days must cover all topics. "
             "Respond STRICT JSON only:\n"
             '{"plan": [{"day": int, "topic": string, "tasks": [string], "focus": string, "duration_hours": float, "revision": bool}], "tips": [string]}\n'
-            f"Create exactly {min(days_left, 14)} days if many topics, else {days_left} days. Each day 2-4 tasks. In Malayalam."
+            f"Create EXACTLY {days_left} days, one entry per calendar day from {start.isoformat()} to {exam_date}. Each day 2-4 tasks. In Malayalam."
         )
     else:
         prompt = (
@@ -91,7 +129,8 @@ def generate_study_plan(
             "- Keep tone warm, encouraging, student-friendly\n"
             "Respond with STRICT JSON only, no markdown:\n"
             '{"plan": [{"day": int, "topic": string, "tasks": [string], "focus": string, "duration_hours": float, "revision": bool}], "tips": [string]}\n'
-            f"Create {min(days_left, 20)} days max (if more days left, compress). Each day duration ~{daily_hours}h. In English."
+            f"Create EXACTLY {days_left} entries, one per calendar day from {start.isoformat()} to {exam_date} (end day = exam day, use it for final revision). "
+            f"Do not compress or skip days. Each day duration ~{daily_hours}h. In English."
         )
 
     try:
@@ -105,10 +144,14 @@ def generate_study_plan(
         elif provider == "gemini":
             from google.genai import types
 
+            from app.services.ai import DEPRECATED_MODELS
+
             name = model_name or settings.gemini_model
-            # handle deprecated
-            if name in ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite", ""):
+            # handle deprecated models that now 404 -> always resolve to a valid model
+            if not name or name in DEPRECATED_MODELS:
                 name = settings.gemini_model
+            if not name or name in DEPRECATED_MODELS:
+                name = "gemini-3-flash-preview"
             client = gemini._client()
             resp = client.models.generate_content(
                 model=name,
@@ -120,25 +163,12 @@ def generate_study_plan(
             )
             data = _robust_json_loads(resp.text)
         elif provider == "quick":
-            # deterministic quick: split syllabus lines into topics
-            topics = [t.strip() for t in truncated.split("\n") if t.strip()][:20]
+            # deterministic quick: build full day-by-day plan from syllabus lines
+            topics = [t.strip() for t in truncated.split("\n") if t.strip()]
             if not topics:
                 topics = truncated.split(".")[:10]
-            plan = []
-            start = date.today() + timedelta(days=1)
-            for i, topic in enumerate(topics[:min(days_left, 10)]):
-                d = start + timedelta(days=i)
-                plan.append({
-                    "day": i+1,
-                    "topic": topic[:80],
-                    "tasks": [f"Study {topic[:40]}", "Make flashcards", "Practice 5 Qs"],
-                    "focus": "Understanding" if i % 3 == 0 else "Practice",
-                    "duration_hours": float(daily_hours),
-                    "revision": i % 4 == 3,
-                    "date": d.isoformat(),
-                })
             return "quick", {
-                "plan": plan,
+                "plan": _build_full_plan(topics, days_left, start, daily_hours),
                 "tips": ["Revise daily 15 min", "Pomodoro 25/5", "Sleep well"],
             }
         else:
@@ -148,9 +178,9 @@ def generate_study_plan(
         raw_plan = data.get("plan", [])
         tips = data.get("tips", [])[:5]
         plan = []
-        start = date.today() + timedelta(days=1)
+        start_day = date.today() + timedelta(days=1)
         for idx, p in enumerate(raw_plan):
-            d = start + timedelta(days=idx)
+            d = start_day + timedelta(days=idx)
             plan.append({
                 "day": p.get("day", idx+1),
                 "date": p.get("date", d.isoformat()),
@@ -163,25 +193,21 @@ def generate_study_plan(
         if not plan:
             raise ValueError("Empty plan")
 
+        # Pad to a full plan if the model returned fewer days than are left
+        if len(plan) < days_left:
+            topics = [t.strip() for t in truncated.split("\n") if t.strip()] or ["General Review"]
+            pad_start = date.fromisoformat(plan[-1]["date"]) + timedelta(days=1)
+            plan.extend(
+                _build_full_plan(topics, days_left - len(plan), pad_start, daily_hours, day_offset=len(plan))
+            )
+
         return "ai", {"plan": plan, "tips": tips}
 
     except Exception as exc:
         logger.exception("Study plan generation failed (provider=%s): %s", provider, exc)
-        # mock fallback: generate simple split
-        start = date.today() + timedelta(days=1)
-        topics = [t.strip() for t in truncated.split("\n") if t.strip()][:10]
-        if not topics:
-            topics = ["General Review"]
-        plan = []
-        for i, topic in enumerate(topics[: min(days_left, 7)]):
-            d = start + timedelta(days=i)
-            plan.append({
-                "day": i+1,
-                "date": d.isoformat(),
-                "topic": topic[:80],
-                "tasks": [f"Review {topic[:30]}", "Practice Qs"],
-                "focus": "Revision" if i == len(topics)-1 else "Understanding",
-                "duration_hours": float(daily_hours),
-                "revision": i > 0 and i % 3 == 0,
-            })
-        return "mock", {"plan": plan, "tips": MOCK_PLAN["tips"]}
+        # mock fallback: full deterministic plan covering every remaining day
+        topics = [t.strip() for t in truncated.split("\n") if t.strip()]
+        return "mock", {
+            "plan": _build_full_plan(topics, days_left, start, daily_hours),
+            "tips": MOCK_PLAN["tips"],
+        }

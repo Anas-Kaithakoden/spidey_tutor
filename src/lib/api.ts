@@ -594,3 +594,28 @@ export function generateStudyPlan(payload: {
     body: JSON.stringify(payload),
   });
 }
+
+export function generateStudyPlanFromPdf(
+  file: File,
+  payload: {
+    exam_date: string;
+    daily_hours?: number;
+    provider: string;
+    model_name: string;
+    language?: string;
+    syllabus?: string;
+  }
+): Promise<StudyPlan> {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("exam_date", payload.exam_date);
+  form.append("daily_hours", String(payload.daily_hours ?? 3));
+  form.append("provider", payload.provider);
+  form.append("model_name", payload.model_name);
+  if (payload.language) form.append("language", payload.language);
+  if (payload.syllabus) form.append("syllabus", payload.syllabus);
+  return request<StudyPlan>("/study-plan/pdf", {
+    method: "POST",
+    body: form,
+  });
+}
