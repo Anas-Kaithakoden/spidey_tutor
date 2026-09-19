@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import Base, engine
 from app.models import ChatMessage, Material  # noqa: F401 (ensure models are registered)
+from app.models import PodcastEpisode  # noqa: F401 (ensure podcast model is registered)
 from app.models import (  # noqa: F401 (ensure exam models are registered)
     Exam,
     ExamAttempt,
@@ -20,6 +21,7 @@ from app.routers import (
     exams,
     flashcards,
     materials,
+    podcasts,
     quizzes,
     study_notes,
     youtube_materials,
@@ -68,6 +70,7 @@ app.add_middleware(
 
 app.include_router(materials.router)
 app.include_router(quizzes.router)
+app.include_router(podcasts.router)
 app.include_router(flashcards.router)
 app.include_router(audio.router)
 app.include_router(study_notes.router)

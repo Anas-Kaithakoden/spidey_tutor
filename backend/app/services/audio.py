@@ -107,11 +107,10 @@ def generate_summary_text(
         return "mock", mock
 
 
-def _pcm_to_wav_base64(pcm_b64: str, sample_rate: int = 24000) -> tuple[str, str]:
-    """Convert raw PCM base64 (L16) to WAV base64 so <audio> can play it."""
+def _wav_bytes_from_pcm(pcm_bytes: bytes, sample_rate: int = 24000) -> bytes:
+    """Wrap raw PCM (L16, mono) bytes in a WAV container browsers can play."""
     import struct
 
-    pcm_bytes = base64.b64decode(pcm_b64)
     num_channels = 1
     bits_per_sample = 16
     byte_rate = sample_rate * num_channels * bits_per_sample // 8
@@ -134,8 +133,35 @@ def _pcm_to_wav_base64(pcm_b64: str, sample_rate: int = 24000) -> tuple[str, str
         b"data",
         data_len,
     )
-    wav_bytes = header + pcm_bytes
+    return header + pcm_bytes
+
+
+def _pcm_to_wav_base64(pcm_b64: str, sample_rate: int = 24000) -> tuple[str, str]:
+    """Convert raw PCM base64 (L16) to WAV base64 so <audio> can play it."""
+    pcm_bytes = base64.b64decode(pcm_b64)
+    wav_bytes = _wav_bytes_from_pcm(pcm_bytes, sample_rate)
     return "audio/wav", base64.b64encode(wav_bytes).decode("utf-8")
+
+
+def _wave_pcm_and_rate(wav_bytes: bytes) -> tuple[bytes, int]:
+    """Extract raw PCM payload + sample rate from a WAV file, skipping the header."""
+    if len(wav_bytes) < 44 or wav_bytes[:4] != b"RIFF":
+        raise ValueError("Not a WAV file")
+    # fmt chunk: bytes 12-15 = "fmt ", 16-19 = chunk size, 20-21 = audio format,
+    # 22-23 = channels, 24-27 = sample rate
+    rate = int.from_bytes(wav_bytes[24:28], "little")
+    data_offset = 44
+    data_len = len(wav_bytes) - data_offset
+    # The data chunk may not start at 44; scan chunk headers to be safe.
+    offset = 12
+    while offset + 8 <= len(wav_bytes):
+        chunk_id = wav_bytes[offset : offset + 4]
+        size = int.from_bytes(wav_bytes[offset + 4 : offset + 8], "little")
+        if chunk_id == b"data":
+            start = offset + 8
+            return wav_bytes[start : start + size], rate
+        offset += 8 + size + (size % 2)
+    return wav_bytes[data_offset:], rate
 
 
 def generate_tts_audio(
@@ -221,3 +247,56 @@ def generate_tts_audio(
     except Exception as exc:
         logger.exception("Gemini TTS failed (voice=%s): %s", voice_name, exc)
         raise
+
+
+def synthesize_podcast_audio(
+    lines: list[dict],
+    voice_one: str = "Kore",
+    voice_two: str = "Puck",
+    pause_ms: int = 300,
+) -> tuple[str, bytes]:
+    """Synthesize an alternating two-host episode into a single WAV.
+
+    Each dialogue line is spoken by its host's voice (``host_one`` ->
+    ``voice_one``, ``host_two`` -> ``voice_two``) and stitched together with a
+    short silence gap between turns so speakers feel distinct and natural.
+
+    Returns ``(mime_type, wav_bytes)``. Raises on any TTS failure — the router
+    decides whether to keep the script-only episode and surface an error.
+    """
+    if not lines:
+        raise ValueError("Cannot synthesize a podcast with no dialogue lines.")
+
+    pcm_chunks: list[bytes] = []
+    sample_rate = 24000
+    silence = b"\x00\x00" * (sample_rate * pause_ms // 1000)
+
+    for idx, line in enumerate(lines):
+        text = str(line.get("text") or "").strip()
+        speaker = str(line.get("speaker") or "host_one")
+        if not text:
+            continue
+        voice = voice_one if speaker == "host_one" else voice_two
+        _mime, b64, _generated = generate_tts_audio(text, voice_name=voice)
+        wav = base64.b64decode(b64)
+        pcm, rate = _wave_pcm_and_rate(wav)
+        if idx == 0:
+            sample_rate = rate
+            silence = b"\x00\x00" * (sample_rate * pause_ms // 1000)
+        else:
+            pcm_chunks.append(silence)
+        pcm_chunks.append(pcm)
+
+    full_pcm = b"".join(pcm_chunks)
+    if not full_pcm:
+        raise ValueError("No audio was generated for the podcast.")
+    return "audio/wav", _wav_bytes_from_pcm(full_pcm, sample_rate)
+
+
+def podcast_duration_seconds(wav_bytes: bytes) -> float:
+    """Best-effort duration of a WAV produced by ``synthesize_podcast_audio``."""
+    try:
+        _pcm, rate = _wave_pcm_and_rate(wav_bytes)
+        return len(_pcm) / (rate * 2)
+    except Exception:
+        return 0.0

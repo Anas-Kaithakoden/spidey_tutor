@@ -293,6 +293,220 @@ def generate_chat_reply(
     return answer
 
 
+# Study Podcast ----------------------------------------------------------------
+# Deterministic two-host podcast scripts. Every factual line is drawn verbatim
+# (or near-verbatim) from the material's sentences; host reactions are short
+# spoken fillers that never introduce facts. The script stays inside the
+# caller's word budget for the requested duration.
+
+PODCAST_MODE_TITLES = {
+    "learn": "Learn",
+    "revise": "Revise",
+    "exam_prep": "Exam Prep",
+    "weak_topics": "Weak Topics",
+}
+
+PODCAST_WPM_CEILING = 165
+
+_MODE_INTROS = {
+    "learn": (
+        "Welcome back to Study Sesh! Today we're taking a proper deep dive "
+        "into the material — real explanations, not a recap."
+    ),
+    "revise": (
+        "Hey, quick episode today. This is a fast Revise run — the definitions "
+        "and facts you need to remember, straight from the material."
+    ),
+    "exam_prep": (
+        "Welcome to Exam Prep. We're hitting the highest-value concepts and "
+        "pointing out what's most likely to show up, with a self-check or two."
+    ),
+    "weak_topics": (
+        "Welcome back! Your recent results flagged a few topics worth "
+        "strengthening, so today's episode is built around exactly those."
+    ),
+}
+
+
+def _podcast_focus_terms(text: str, n: int = 6) -> list[str]:
+    return [term for term, _ in _term_counts(text)][:n]
+
+
+def _podcast_reorder(
+    pairs: list[tuple[str, str]], keywords: list[str]
+) -> list[tuple[str, str]]:
+    """Move sentences touching the given keywords to the front (stable)."""
+    if not keywords:
+        return pairs
+    priority, rest = [], []
+    for sentence, term in pairs:
+        lowered = sentence.lower()
+        hit = any(kw in lowered for kw in keywords) or any(
+            kw in term.lower() for kw in keywords
+        )
+        (priority if hit else rest).append((sentence, term))
+    return priority + rest
+
+
+def generate_podcast_script(
+    material_text: str,
+    mode: str = "learn",
+    duration_minutes: int = 5,
+    focus_topic: str = "",
+    weak_topics: list[dict] | None = None,
+) -> dict:
+    """Build a deterministic, material-grounded two-host podcast script.
+
+    Returns the same raw dict shape the LLM providers return so the shared
+    validation in ``services/podcast.py`` can run unchanged::
+
+        {"title": str, "lines": [{"speaker": str, "text": str}]}
+    """
+    sentences = _split_sentences(material_text)
+    ranked = [term for term, _ in _term_counts(material_text)]
+    pairs = _pairs(sentences, ranked)
+    terms = _podcast_focus_terms(material_text)
+    title_topic = (
+        focus_topic.strip()
+        or (terms[0].capitalize() if terms else "This Material")
+    )
+    title = f"{PODCAST_MODE_TITLES.get(mode, 'Learn')}: {title_topic}"
+    budget = max(60, int(duration_minutes) * PODCAST_WPM_CEILING)
+
+    lines: list[dict] = [
+        {
+            "speaker": "host_one",
+            "text": _MODE_INTROS.get(mode, _MODE_INTROS["learn"]),
+        },
+        {
+            "speaker": "host_two",
+            "text": (
+                f"Let's get into it. {title_topic} — what does the "
+                "material actually say about it first?"
+            ),
+        },
+    ]
+
+    if focus_topic:
+        keywords = [
+            w for w in _tokens(focus_topic) if w not in _STOPWORDS and len(w) > 2
+        ]
+        pairs = _podcast_reorder(pairs, keywords)
+    if mode == "weak_topics" and weak_topics:
+        weak_keywords: list[str] = []
+        for topic in weak_topics:
+            name = str(topic.get("title", ""))
+            weak_keywords += [
+                w for w in _tokens(name) if w not in _STOPWORDS and len(w) > 2
+            ]
+        pairs = _podcast_reorder(pairs, weak_keywords)
+
+    outro_words = 45
+    spent = _count_words(lines)
+    idx = 0
+    used = 0
+    while idx < len(pairs) and spent < budget - outro_words:
+        remaining = budget - outro_words - spent
+        if remaining < 25:
+            break
+        sentence, term = pairs[idx]
+        idx += 1
+        sentence_next, term_next = (
+            pairs[idx] if idx < len(pairs) else (None, None)
+        )
+        if sentence_next is not None:
+            idx += 1
+        else:
+            sentence_next, term_next = sentence, term
+
+        used += 1
+        if mode == "exam_prep" and used % 3 == 0:
+            pair_lines = [
+                {
+                    "speaker": "host_two",
+                    "text": (
+                        "Quick self-check from the material: which term fits "
+                        f"here? {_cloze(sentence, term)}"
+                    ),
+                },
+                {
+                    "speaker": "host_one",
+                    "text": (
+                        f"That's {term} — the material brings it up in exactly "
+                        "that context."
+                    ),
+                },
+            ]
+        elif mode == "revise":
+            pair_lines = [
+                {"speaker": "host_one", "text": f"Quick point: {sentence}."},
+                {"speaker": "host_two", "text": f"{term} — noted."},
+                {"speaker": "host_one", "text": f"Next: {sentence_next}."},
+                {
+                    "speaker": "host_two",
+                    "text": f"Right, and that's the essence of {term_next}.",
+                },
+            ]
+        elif mode == "weak_topics":
+            pair_lines = [
+                {
+                    "speaker": "host_one",
+                    "text": f"Let's slow down here — this one needs attention: {sentence}.",
+                },
+                {
+                    "speaker": "host_two",
+                    "text": f"So {term} is really about that. How does it tie to another idea?",
+                },
+                {"speaker": "host_one", "text": f"Sure — {sentence_next}."},
+                {
+                    "speaker": "host_two",
+                    "text": f"Got it. One more angle: {term_next}.",
+                },
+            ]
+        else:  # learn
+            pair_lines = [
+                {
+                    "speaker": "host_one",
+                    "text": f"Here's the core idea as the material frames it: {sentence}.",
+                },
+                {
+                    "speaker": "host_two",
+                    "text": f"That connects to {term} — what else does it tie into?",
+                },
+                {
+                    "speaker": "host_one",
+                    "text": f"It also relates to this: {sentence_next}.",
+                },
+                {
+                    "speaker": "host_two",
+                    "text": f"So the thread running through is {term} and {term_next}. Keep going.",
+                },
+            ]
+
+        pair_words = _count_words(pair_lines)
+        if spent + pair_words > budget - outro_words:
+            break
+        lines.extend(pair_lines)
+        spent += pair_words
+
+    recap_terms = ", ".join(dict.fromkeys(terms[:4])) or "the material's key ideas"
+    lines += [
+        {
+            "speaker": "host_one",
+            "text": f"Quick recap before we go: {recap_terms} — those are today's takeaways.",
+        },
+        {
+            "speaker": "host_two",
+            "text": "And remember, the details live in the material — review it for the depth. See you next episode!",
+        },
+    ]
+    return {"title": title, "lines": lines}
+
+
+def _count_words(lines: list[dict]) -> int:
+    return sum(len(str(line["text"]).split()) for line in lines)
+
+
 # Exam Mode -------------------------------------------------------------------
 # Deterministic mixed-type exams. The caller passes an ordered ``distribution``
 # (one question type per slot); quick mode fills each slot strictly from the

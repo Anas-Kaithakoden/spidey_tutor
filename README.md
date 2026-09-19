@@ -179,6 +179,12 @@ All endpoints live under `/api`. From the frontend they are proxied automaticall
 | `DELETE` | `/api/chat?material_id={id}` | — | Clear the conversation for a material |
 | `GET` | `/api/analytics` | — | Study progress: quizzes, average score, accuracy, flashcard reviews, study sessions, performance by topic, score trend, recent activity |
 | `POST` | `/api/flashcards/{id}/review` | — | Count one flashcard review (tracks `review_count`, feeds the analytics dashboard) |
+| `POST` | `/api/podcasts` | `{ material_id, title?, mode, duration_minutes (1–10), focus_topic?, provider, model_name }` | Generate a two-host Study Podcast episode (script + Gemini-TTS audio written to `backend/media/podcasts/`) |
+| `GET` | `/api/podcasts?material_id={id}` | — | Saved episodes (newest first) |
+| `GET` | `/api/podcasts/{id}` | — | One episode: script lines, mode, duration, audio status |
+| `GET` | `/api/podcasts/{id}/audio` | — | WAV file for a `ready` episode |
+| `DELETE` | `/api/podcasts/{id}` | — | Delete an episode (and its audio file) |
+| `POST` | `/api/podcasts/{id}/audio` | — | Retry audio synthesis for an existing script (e.g. after adding `GEMINI_API_KEY`) |
 
 **Convention: request/response payloads are defined once in `backend/app/schemas.py` and typed once in `src/lib/api.ts`. When you add an endpoint, update both.**
 
