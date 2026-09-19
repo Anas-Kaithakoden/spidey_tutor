@@ -10,6 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { ModelSelect } from "@/components/model-select";
 import {
+  LanguageToggle,
+  type StudyLanguage,
+} from "@/components/language-toggle";
+import {
   clearChat,
   getChatMessages,
   sendChatMessage,
@@ -32,6 +36,12 @@ const SUGGESTIONS = [
   "List the key definitions and terms.",
 ];
 
+const SUGGESTIONS_ML = [
+  "ഈ മെറ്റീരിയലിലെ പ്രധാന പോയിന്റുകൾ സംഗ്രഹിക്കുക.",
+  "ഏതൊക്കെയാണ് ഏറ്റവും പ്രധാനപ്പെട്ട ആശയങ്ങൾ?",
+  "പ്രധാന നിർവചനങ്ങളും പദങ്ങളും പട്ടികപ്പെടുത്തുക.",
+];
+
 export default function Chat() {
   const router = useRouter();
   const { material, model } = useStudy();
@@ -40,6 +50,7 @@ export default function Chat() {
   const [sending, setSending] = useState(false);
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [language, setLanguage] = useState<StudyLanguage>("en");
   const endRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -87,6 +98,7 @@ export default function Chat() {
       role: "user",
       content,
       generated_by: "",
+      language,
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimistic]);
@@ -96,7 +108,8 @@ export default function Chat() {
         material.id,
         content,
         model.provider,
-        model.name
+        model.name,
+        language
       );
       if (reply.assistant_message.generated_by === "mock") {
         toast.info(
@@ -167,6 +180,7 @@ export default function Chat() {
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <ModelSelect className="w-56" />
+          <LanguageToggle value={language} onChange={setLanguage} />
           {messages.length > 0 && (
             <Button
               variant="outline"
@@ -236,7 +250,7 @@ export default function Chat() {
                 </p>
               </div>
               <div className="flex flex-wrap justify-center gap-2 pt-1">
-                {SUGGESTIONS.map((s) => (
+                {(language === "ml" ? SUGGESTIONS_ML : SUGGESTIONS).map((s) => (
                   <Button
                     key={s}
                     variant="outline"
@@ -276,11 +290,15 @@ export default function Chat() {
                     </p>
                   )}
                   {m.role === "assistant" &&
-                    (m.generated_by === "quick" || m.generated_by === "mock") && (
+                    (m.language === "ml" ||
+                      m.generated_by === "quick" ||
+                      m.generated_by === "mock") && (
                       <p className="mt-1 pl-1 text-[10px] text-muted-foreground">
                         {m.generated_by === "quick"
                           ? "Quick Mode — deterministic reply, no AI call"
-                          : "Sample reply — AI generation failed for the selected model"}
+                          : m.generated_by === "mock"
+                            ? "Sample reply — AI generation failed for the selected model"
+                            : "മലയാളം"}
                       </p>
                     )}
                 </div>

@@ -25,6 +25,7 @@ def _to_out(note: StudyNote) -> StudyNotesOut:
         generated_by=note.generated_by,
         provider=note.provider,
         model_name=note.model_name,
+        language=note.language,
         created_at=note.created_at,
     )
 
@@ -55,6 +56,7 @@ def create_study_notes(payload: CreateStudyNotes, db: Session = Depends(get_db))
         material.content,
         provider=payload.provider,
         model_name=payload.model_name,
+        language=payload.language,
     )
 
     note = StudyNote(
@@ -66,6 +68,7 @@ def create_study_notes(payload: CreateStudyNotes, db: Session = Depends(get_db))
         generated_by=generated_by,
         provider=payload.provider,
         model_name=payload.model_name,
+        language=payload.language,
     )
     db.add(note)
     db.commit()

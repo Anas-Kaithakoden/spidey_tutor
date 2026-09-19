@@ -132,8 +132,18 @@ def generate_flashcards_raw(
 def generate_study_notes_raw(
     material_text: str,
     model_name: str,
+    language: str = "en",
 ) -> dict:
     """Call Gemini and return raw study-notes dict (no normalization)."""
+    ml_prompt = ""
+    if language.lower().startswith("ml"):
+        ml_prompt = (
+            "- Write ALL output (title, summary, headings, content, "
+            "bullet points, terms and definitions) in Malayalam (മലയാളം).\n"
+            "- Explain the study material in Malayalam; keep technical terms "
+            "and proper nouns in English where clearer, with a short "
+            "Malayalam gloss.\n"
+        )
     prompt = (
         "You are a study notes generator for a study tool.\n"
         "Create structured, student-friendly study notes from the material.\n\n"
@@ -142,7 +152,8 @@ def generate_study_notes_raw(
         "- Organize the content into logical topics/sections with clear headings.\n"
         "- Keep explanations concise and clear.\n"
         "- Use bullet points where listing facts, steps, or examples helps.\n"
-        "- Highlight the most important concepts and definitions in key_concepts.\n\n"
+        "- Highlight the most important concepts and definitions in key_concepts.\n"
+        f"{ml_prompt}"
         "Respond with STRICT JSON only, matching this schema:\n"
         '{"title": string, "summary": string, '
         '"sections": [{"heading": string, "content": string, "bullet_points": [string]}], '
@@ -164,12 +175,20 @@ def generate_chat_reply_raw(
     material_text: str,
     history: list[dict],
     model_name: str,
+    language: str = "en",
 ) -> str:
     """Call Gemini and return a grounded answer to the last user message.
 
     ``history`` is the conversation so far (oldest first, ending with the
     current user question) as ``{"role": ..., "content": ...}`` dicts.
     """
+    ml_prompt = ""
+    if language.lower().startswith("ml"):
+        ml_prompt = (
+            "- Reply in Malayalam (മലയാളം).\n"
+            "- Keep technical terms in English where clearer, with a short "
+            "Malayalam explanation.\n"
+        )
     prompt = (
         "You are a study assistant that answers questions strictly based "
         "ONLY on the uploaded study material provided below.\n\n"
@@ -182,7 +201,8 @@ def generate_chat_reply_raw(
         "- Follow-up questions may refer back to earlier messages or to the "
         "material.\n"
         "- Keep answers concise, clear, and in the same language as the "
-        "question.\n\n"
+        "question.\n"
+        f"{ml_prompt}"
         "Conversation so far (newest last):\n"
     )
     for m in history:

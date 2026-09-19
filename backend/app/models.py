@@ -123,6 +123,7 @@ class StudyNote(Base):
     generated_by: Mapped[str] = mapped_column(String(8), default="mock")
     provider: Mapped[str] = mapped_column(String(16), default="gemini")
     model_name: Mapped[str] = mapped_column(String(64), default="")
+    language: Mapped[str] = mapped_column(String(8), default="en")
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow
     )
@@ -136,6 +137,7 @@ class ChatMessage(Base):
     role: Mapped[str] = mapped_column(String(16))
     content: Mapped[str] = mapped_column(Text)
     generated_by: Mapped[str] = mapped_column(String(8), default="")
+    language: Mapped[str] = mapped_column(String(8), default="en")
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow
     )
