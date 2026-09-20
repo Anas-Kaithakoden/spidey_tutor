@@ -5,22 +5,18 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useStudy } from "@/lib/context";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  ChevronLeft,
-  ChevronRight,
-  CreditCard,
-  Loader2,
-  RotateCcw,
-} from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { FlashcardDeck } from "@/components/flashcard-deck";
+import { StagedGeneration } from "@/components/staged-generation";
+import { MaterialPicker } from "@/components/material-picker";
+import { ModelSelect } from "@/components/model-select";
 import {
   generateFlashcards,
   getFlashcards,
-  reviewFlashcard,
   type FlashcardOut,
 } from "@/lib/api";
-import { ModelSelect } from "@/components/model-select";
+import { Sparkles, Layers, RotateCcw } from "lucide-react";
 
 export default function Flashcards() {
   const router = useRouter();
@@ -28,15 +24,14 @@ export default function Flashcards() {
   const [cards, setCards] = useState<FlashcardOut[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [current, setCurrent] = useState(0);
-  const [flipped, setFlipped] = useState(false);
 
   useEffect(() => {
     if (!material) {
-      router.replace("/add");
+      setTimeout(() => setLoading(false), 0);
       return;
     }
     let cancelled = false;
+    setTimeout(() => setLoading(true), 0);
     getFlashcards(material.id)
       .then((existing) => {
         if (!cancelled) setCards(existing);
@@ -52,7 +47,7 @@ export default function Flashcards() {
     return () => {
       cancelled = true;
     };
-  }, [material, router]);
+  }, [material]);
 
   async function handleGenerate() {
     if (!material) return;
@@ -60,12 +55,10 @@ export default function Flashcards() {
     try {
       const generated = await generateFlashcards(material.id, model.provider, model.name);
       setCards(generated);
-      setCurrent(0);
-      setFlipped(false);
       if (generated.length && generated[0].provider === "quick") {
         toast.info("Quick Mode: flashcards generated deterministically, no AI call.");
       } else {
-        toast.success("Flashcards generated!");
+        toast.success("Flashcards generated successfully!");
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to generate flashcards.");
@@ -74,148 +67,104 @@ export default function Flashcards() {
     }
   }
 
-  function goNext() {
-    setFlipped(false);
-    setCurrent((prev) => (prev < cards.length - 1 ? prev + 1 : 0));
-  }
-
-  function goPrev() {
-    setFlipped(false);
-    setCurrent((prev) => (prev > 0 ? prev - 1 : cards.length - 1));
-  }
-
+  // If no material is selected, show the in-page MaterialPicker instead of redirecting!
   if (!material) {
     return (
-      <div className="flex flex-col items-center justify-center py-24">
-        <Loader2 className="mb-4 size-6 animate-spin text-muted-foreground" />
-        <p className="text-muted-foreground">Redirecting...</p>
+      <div className="mx-auto max-w-3xl px-4 py-12">
+        <MaterialPicker
+          title="Choose a Study Set for Flashcards"
+          description="Select which of your uploaded materials you want to review or generate 3D flashcards for."
+        />
       </div>
     );
   }
 
-  const card = cards[current];
+  if (generating) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-20">
+        <StagedGeneration
+          title="Spidey is weaving your flashcard deck..."
+          stages={[
+            "Reading lecture concepts",
+            "Pairing terms & explanations",
+            "Refining active-recall cards",
+            "Ready for study!",
+          ]}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-12">
-      <h1 className="mb-2 text-2xl font-bold">Flashcards</h1>
-      <p className="mb-8 text-muted-foreground">
-        {cards.length > 0
-          ? "Click the card to flip it. Use arrows to navigate."
-          : "Your flashcards are saved alongside your study material."}
-      </p>
+    <div className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/15 px-3 py-0.5 text-xs font-semibold text-accent-foreground mb-2 shadow-xs">
+            <Layers className="size-3.5 text-brand-gold" />
+            <span>Active Recall Deck</span>
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+            Study Flashcards
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Studying: <strong className="text-foreground">{material.title || "Untitled Material"}</strong>
+          </p>
+        </div>
+
+        {cards.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGenerate}
+              disabled={generating}
+              className="rounded-xl border-border/80 hover:bg-muted"
+            >
+              <RotateCcw className="size-3.5 mr-1.5" />
+              Regenerate
+            </Button>
+          </div>
+        )}
+      </div>
 
       {cards.length > 0 && cards[0].provider === "quick" && (
-        <Badge variant="secondary" className="mb-4">
-          Quick Mode — no AI call
+        <Badge variant="secondary" className="mb-6 font-mono text-xs">
+          Quick Mode — Deterministic synthesis
         </Badge>
       )}
 
+      {/* Main Content Area */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-24">
-          <Loader2 className="mb-4 size-6 animate-spin text-muted-foreground" />
-          <p className="text-muted-foreground">Loading flashcards...</p>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin mb-4" />
+          <p className="text-sm text-muted-foreground">Loading your flashcards...</p>
         </div>
       ) : cards.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed p-12 text-center">
-          <CreditCard className="size-10 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            No flashcards yet. Generate them from your study material — the AI
-            pulls out the most important concepts and definitions.
-          </p>
-          <ModelSelect className="w-full max-w-xs" />
-          <Button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="gap-2"
-          >
-            {generating ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <CreditCard className="size-4" />
-                Generate Flashcards
-              </>
-            )}
-          </Button>
-        </div>
+        <EmptyState
+          mascotMood="idle"
+          title="No flashcards generated yet"
+          description="Give Spidey your study material and I will extract the most critical definitions, equations, and active recall concepts."
+          action={
+            <div className="flex flex-col items-center gap-4 w-full max-w-sm mt-4">
+              <ModelSelect className="w-full" />
+              <Button
+                onClick={handleGenerate}
+                disabled={generating}
+                size="lg"
+                className="w-full rounded-xl font-semibold shadow-md shadow-primary/20 hover:shadow-primary/30"
+              >
+                <Sparkles className="size-4 mr-2" />
+                Generate Flashcard Deck
+              </Button>
+            </div>
+          }
+        />
       ) : (
-        <>
-          {/* Card */}
-          <div
-            onClick={() => {
-              if (!flipped) {
-                reviewFlashcard(card.id).catch(() => {
-                  // tracking is best-effort; never block the review flow
-                });
-              }
-              setFlipped(!flipped);
-            }}
-            className="mb-8 cursor-pointer"
-            style={{ perspective: "1000px" }}
-          >
-            <Card className="min-h-[250px]">
-              <CardContent className="flex flex-col items-center justify-center pt-6 text-center">
-                <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  {flipped ? "Back" : "Front"}
-                </p>
-                <p className="text-lg font-medium leading-relaxed">
-                  {flipped ? card.back : card.front}
-                </p>
-                <p className="mt-4 text-xs text-muted-foreground">
-                  Click to {flipped ? "see front" : "reveal answer"}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Navigation */}
-          <div className="flex items-center justify-between">
-            <Button variant="outline" onClick={goPrev} className="gap-1">
-              <ChevronLeft className="size-4" />
-              Previous
-            </Button>
-
-            <span className="text-sm text-muted-foreground">
-              {current + 1} / {cards.length}
-            </span>
-
-            <Button variant="outline" onClick={goNext} className="gap-1">
-              Next
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-
-          {/* Dots */}
-          <div className="mt-6 flex flex-wrap justify-center gap-2">
-            {cards.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => {
-                  setFlipped(false);
-                  setCurrent(idx);
-                }}
-                className={`size-2.5 rounded-full transition-colors cursor-pointer ${
-                  idx === current ? "bg-primary" : "bg-muted"
-                }`}
-              />
-            ))}
-          </div>
-
-          {/* Actions */}
-          <div className="mt-8 flex justify-center">
-            <Button
-              variant="outline"
-              onClick={() => router.push("/quiz/setup")}
-              className="gap-2"
-            >
-              <RotateCcw className="size-4" />
-              Take a Quiz
-            </Button>
-          </div>
-        </>
+        <FlashcardDeck
+          cards={cards}
+          onTakeQuiz={() => router.push("/quiz/setup")}
+        />
       )}
     </div>
   );

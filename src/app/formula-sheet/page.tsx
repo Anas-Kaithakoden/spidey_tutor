@@ -11,6 +11,7 @@ import { Download, Loader2, Sparkles, Beaker } from "lucide-react";
 import { useStudy } from "@/lib/context";
 import { generateFormulaSheet, downloadFormulaSheetPdf, type FormulaSheet } from "@/lib/api";
 import { ModelSelect } from "@/components/model-select";
+import { ThinkingAnimation } from "@/components/thinking-animation";
 
 export default function FormulaSheetPage() {
   const { material, model } = useStudy();
@@ -131,6 +132,15 @@ export default function FormulaSheetPage() {
           </div>
         </CardContent>
       </Card>
+
+      {loading && (
+        <ThinkingAnimation
+          variant="card"
+          text="Spidey is extracting formulas & theorems..."
+          subtext="Identifying math equations, variable definitions, and unit conversions..."
+          className="my-6"
+        />
+      )}
 
       {sheet && (
         <div className="space-y-4">

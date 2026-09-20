@@ -13,6 +13,8 @@ import {
   LanguageToggle,
   type StudyLanguage,
 } from "@/components/language-toggle";
+import { MaterialPicker } from "@/components/material-picker";
+import { ThinkingAnimation } from "@/components/thinking-animation";
 import {
   clearChat,
   getChatMessages,
@@ -56,7 +58,7 @@ export default function Chat() {
 
   useEffect(() => {
     if (!material) {
-      router.replace("/add");
+      setTimeout(() => setLoading(false), 0);
       return;
     }
     let cancelled = false;
@@ -162,9 +164,11 @@ export default function Chat() {
 
   if (!material) {
     return (
-      <div className="flex flex-col items-center justify-center py-24">
-        <Loader2 className="mb-4 size-6 animate-spin text-muted-foreground" />
-        <p className="text-muted-foreground">Redirecting...</p>
+      <div className="mx-auto max-w-3xl px-4 py-12">
+        <MaterialPicker
+          title="Choose a Study Set to Ground Your Tutor"
+          description="Spidey Tutor answers strictly using your uploaded materials with exact citations. Select which material you want to discuss."
+        />
       </div>
     );
   }
@@ -307,12 +311,7 @@ export default function Chat() {
           )}
 
           {sending && (
-            <div className="flex w-full justify-start">
-              <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-muted px-3.5 py-2.5 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" />
-                Thinking...
-              </div>
-            </div>
+            <ThinkingAnimation variant="chat" />
           )}
 
           <div ref={endRef} className="h-px" />

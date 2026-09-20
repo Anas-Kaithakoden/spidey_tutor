@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Exam, ExamResult, Material, Quiz, QuizResult } from "./api";
 
 interface ModelOption {
@@ -93,6 +93,27 @@ export function StudyProvider({ children }: { children: ReactNode }) {
   const [examResult, setExamResult] = useState<ExamResult | null>(null);
   const [model, setModelState] = useState<ModelOption>(loadModel);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        const raw = localStorage.getItem("spidey-material");
+        if (raw) setMaterial(JSON.parse(raw) as Material);
+      } catch {
+        localStorage.removeItem("spidey-material");
+      }
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
+
+  function setStudyMaterial(next: Material) {
+    setMaterial(next);
+    try {
+      localStorage.setItem("spidey-material", JSON.stringify(next));
+    } catch {
+      // Keep the in-memory session usable when storage is unavailable.
+    }
+  }
+
   function setModel(m: ModelOption) {
     setModelState(m);
     saveModel(m);
@@ -102,7 +123,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     <StudyContext.Provider
       value={{
         material,
-        setMaterial,
+        setMaterial: setStudyMaterial,
         quizConfig,
         setQuizConfig,
         activeQuiz,

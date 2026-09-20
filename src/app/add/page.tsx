@@ -1,21 +1,23 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, DragEvent, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { SpideyMascot } from "@/components/spidey-mascot";
+import { StagedGeneration } from "@/components/staged-generation";
 import {
   Upload,
   FileText,
   ArrowRight,
-  Loader2,
-  Image as ImageIcon,
-  FileSpreadsheet,
+  Sparkles,
   Video,
+  File,
+  X,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useStudy } from "@/lib/context";
 import {
@@ -35,323 +37,334 @@ function isYoutubeUrl(value: string): boolean {
 export default function AddMaterial() {
   const router = useRouter();
   const { setMaterial } = useStudy();
-  const [tab, setTab] = useState<
-    "text" | "pdf" | "image" | "office" | "youtube"
-  >("text");
-  const [text, setText] = useState("");
-  const [title, setTitle] = useState("");
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [officeFile, setOfficeFile] = useState<File | null>(null);
+
+  // Mode: "drop" | "text" | "youtube"
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileCategory, setFileCategory] = useState<"pdf" | "image" | "office" | "text" | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Paste form state
+  const [textNotes, setTextNotes] = useState("");
+  const [sessionTitle, setSessionTitle] = useState("");
+
+  // YouTube state
+  const [showYoutube, setShowYoutube] = useState(false);
   const [ytUrl, setYtUrl] = useState("");
-  const [ytTitle, setYtTitle] = useState("");
+
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const officeInputRef = useRef<HTMLInputElement>(null);
+
+  // Classify file by extension/MIME
+  function handleFileSelected(file: File) {
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    const type = file.type.toLowerCase();
+
+    if (ext === "pdf" || type === "application/pdf") {
+      setFileCategory("pdf");
+    } else if (["png", "jpg", "jpeg", "webp"].includes(ext) || type.startsWith("image/")) {
+      setFileCategory("image");
+    } else if (["docx", "pptx", "xlsx", "doc", "ppt"].includes(ext)) {
+      setFileCategory("office");
+    } else {
+      // Default to text or generic office
+      setFileCategory("text");
+    }
+
+    setSelectedFile(file);
+    // If title is empty, prefill with file name (without extension)
+    if (!sessionTitle.trim()) {
+      const baseName = file.name.replace(/\.[^/.]+$/, "");
+      setSessionTitle(baseName);
+    }
+  }
+
+  function handleFileInputChange(e: ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFileSelected(files[0]);
+    }
+  }
+
+  function handleDragOver(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setIsDragging(false);
+  }
+
+  function handleDrop(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleFileSelected(files[0]);
+    }
+  }
+
+  function clearSelectedFile() {
+    setSelectedFile(null);
+    setFileCategory(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   async function handleContinue() {
     setSubmitting(true);
     try {
-      if (tab === "text") {
-        const material = await createMaterial(text.trim(), title.trim());
-        setMaterial(material);
-      } else if (tab === "pdf" && pdfFile) {
-        const material = await uploadPdf(pdfFile);
-        setMaterial(material);
-      } else if (tab === "image" && imageFile) {
-        const material = await uploadImage(imageFile);
-        setMaterial(material);
-      } else if (tab === "office" && officeFile) {
-        const material = await uploadOffice(officeFile);
-        setMaterial(material);
-      } else if (tab === "youtube") {
-        const material = await createYoutubeMaterial(
-          ytUrl.trim(),
-          ytTitle.trim() || undefined
-        );
-        setMaterial(material);
+      let material;
+
+      if (selectedFile) {
+        if (fileCategory === "pdf") {
+          material = await uploadPdf(selectedFile);
+        } else if (fileCategory === "image") {
+          material = await uploadImage(selectedFile);
+        } else if (fileCategory === "office") {
+          material = await uploadOffice(selectedFile);
+        } else {
+          // Read text file
+          const textContent = await selectedFile.text();
+          material = await createMaterial(textContent, sessionTitle.trim() || selectedFile.name);
+        }
+      } else if (showYoutube && ytUrl.trim()) {
+        material = await createYoutubeMaterial(ytUrl.trim(), sessionTitle.trim() || undefined);
+      } else if (textNotes.trim()) {
+        material = await createMaterial(textNotes.trim(), sessionTitle.trim());
+      } else {
+        toast.error("Please drop a file or paste your notes to continue.");
+        setSubmitting(false);
+        return;
       }
+
+      setMaterial(material);
+      toast.success("Study material processed successfully!");
       router.push("/preview");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong.");
+      toast.error(err instanceof Error ? err.message : "Failed to process material.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  const ytUrlEmpty = ytUrl.trim().length === 0;
-  const ytUrlInvalid = !ytUrlEmpty && !isYoutubeUrl(ytUrl);
-  const canContinue = submitting
-    ? false
-    : (tab === "text" && text.trim().length > 0) ||
-      (tab === "pdf" && pdfFile !== null) ||
-      (tab === "image" && imageFile !== null) ||
-      (tab === "office" && officeFile !== null) ||
-      (tab === "youtube" && !ytUrlEmpty && !ytUrlInvalid);
+  const ytValid = ytUrl.trim().length > 0 && isYoutubeUrl(ytUrl);
+  const canSubmit = !submitting && (
+    selectedFile !== null ||
+    textNotes.trim().length > 0 ||
+    (showYoutube && ytValid)
+  );
+
+  if (submitting) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-24">
+        <StagedGeneration
+          title="Spidey is weaving your material..."
+          stages={[
+            "Reading uploaded content",
+            "Parsing key concepts & terms",
+            "Synthesizing knowledge structure",
+            "Preparing your study hub",
+          ]}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-12">
-      <h1 className="mb-2 text-2xl font-bold">Add Study Material</h1>
-      <p className="mb-8 text-muted-foreground">
-        Paste text, upload a PDF, image, or office doc, or add a YouTube video.
-      </p>
-
-      <div className="mb-6 grid grid-cols-2 gap-2 rounded-lg border p-1 sm:grid-cols-3 lg:grid-cols-5">
-        <button
-          onClick={() => setTab("text")}
-          disabled={submitting}
-          className={`flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 ${
-            tab === "text"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-muted"
-          }`}
-        >
-          <FileText className="size-4" />
-          Paste Text
-        </button>
-        <button
-          onClick={() => setTab("pdf")}
-          disabled={submitting}
-          className={`flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 ${
-            tab === "pdf"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-muted"
-          }`}
-        >
-          <Upload className="size-4" />
-          PDF
-        </button>
-        <button
-          onClick={() => setTab("image")}
-          disabled={submitting}
-          className={`flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 ${
-            tab === "image"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-muted"
-          }`}
-        >
-          <ImageIcon className="size-4" />
-          Image
-        </button>
-        <button
-          onClick={() => setTab("office")}
-          disabled={submitting}
-          className={`flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 ${
-            tab === "office"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-muted"
-          }`}
-        >
-          <FileSpreadsheet className="size-4" />
-          Office
-        </button>
-        <button
-          onClick={() => setTab("youtube")}
-          disabled={submitting}
-          className={`flex items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 ${
-            tab === "youtube"
-              ? "bg-primary text-primary-foreground"
-              : "text-muted-foreground hover:bg-muted"
-          }`}
-        >
-          <Video className="size-4" />
-          YouTube
-        </button>
+    <div className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
+      {/* Header */}
+      <div className="text-center mb-10">
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-0.5 text-xs font-semibold text-primary mb-3 shadow-xs">
+          <Sparkles className="size-3.5" />
+          <span>New Study Session</span>
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground mb-3">
+          Add your study material
+        </h1>
+        <p className="text-base text-muted-foreground max-w-lg mx-auto leading-relaxed">
+          Drop lecture slides, notes, or readings. Spidey turns them into interactive quizzes and 3D flashcards.
+        </p>
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          {tab === "text" ? (
-            <div key="text" className="space-y-3">
-              <Label htmlFor="material-title">
-                Title <span className="text-muted-foreground">(optional)</span>
-              </Label>
-              <Input
-                id="material-title"
-                placeholder="e.g. Operating Systems - Chapter 1"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-              <Label htmlFor="study-text">Paste your study material</Label>
-              <Textarea
-                id="study-text"
-                placeholder="Paste your lecture notes, textbook content, or any study material here..."
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                className="min-h-[250px] resize-y"
-              />
-              {text.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {text.split(/\s+/).filter(Boolean).length} words &middot;{" "}
-                  {text.length} characters
-                </p>
-              )}
-            </div>
-          ) : tab === "pdf" ? (
-            <div key="pdf" className="space-y-4">
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border-2 border-dashed p-12 text-center transition-colors hover:border-primary/50 hover:bg-muted/50"
-              >
-                {pdfFile ? (
-                  <>
-                    <FileText className="size-10 text-primary" />
-                    <div>
-                      <p className="font-medium">{pdfFile.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(pdfFile.size / 1024).toFixed(1)} KB
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="size-10 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Click to upload a PDF</p>
-                      <p className="text-sm text-muted-foreground">PDF files only</p>
-                    </div>
-                  </>
-                )}
-              </div>
-              <Input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf"
-                className="hidden"
-                onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
-              />
-            </div>
-          ) : tab === "image" ? (
-            <div key="image" className="space-y-4">
-              <div
-                onClick={() => imageInputRef.current?.click()}
-                className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border-2 border-dashed p-12 text-center transition-colors hover:border-primary/50 hover:bg-muted/50"
-              >
-                {imageFile ? (
-                  <>
-                    <ImageIcon className="size-10 text-primary" />
-                    <div>
-                      <p className="font-medium">{imageFile.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(imageFile.size / 1024).toFixed(1)} KB
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <ImageIcon className="size-10 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Click to upload an image</p>
-                      <p className="text-sm text-muted-foreground">png, jpg, jpeg, webp, bmp — OCR via Gemini</p>
-                    </div>
-                  </>
-                )}
-              </div>
-              <Input
-                ref={imageInputRef}
-                type="file"
-                accept=".png,.jpg,.jpeg,.webp,.bmp"
-                className="hidden"
-                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
-              />
-            </div>
-          ) : tab === "office" ? (
-            <div key="office" className="space-y-4">
-              <div
-                onClick={() => officeInputRef.current?.click()}
-                className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border-2 border-dashed p-12 text-center transition-colors hover:border-primary/50 hover:bg-muted/50"
-              >
-                {officeFile ? (
-                  <>
-                    <FileSpreadsheet className="size-10 text-primary" />
-                    <div>
-                      <p className="font-medium">{officeFile.name}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(officeFile.size / 1024).toFixed(1)} KB
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <FileSpreadsheet className="size-10 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Click to upload office document</p>
-                      <p className="text-sm text-muted-foreground">docx, pptx, xlsx, txt, csv — text extracted</p>
-                    </div>
-                  </>
-                )}
-              </div>
-              <Input
-                ref={officeInputRef}
-                type="file"
-                accept=".docx,.pptx,.xlsx,.xls,.txt,.md,.csv"
-                className="hidden"
-                onChange={(e) => setOfficeFile(e.target.files?.[0] ?? null)}
-              />
-            </div>
-          ) : (
-            <div key="youtube" className="space-y-3">
-              <Label htmlFor="yt-url">YouTube video URL</Label>
-              <Input
-                id="yt-url"
-                type="url"
-                placeholder="https://www.youtube.com/watch?v=..."
-                value={ytUrl}
-                onChange={(e) => setYtUrl(e.target.value)}
-              />
-              {ytUrlInvalid && (
-                <p className="text-xs text-destructive">
-                  That doesn&apos;t look like a YouTube video URL. Use a
-                  youtube.com or youtu.be link.
-                </p>
-              )}
-              {!ytUrlInvalid && ytUrl.trim().length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  We&apos;ll fetch the video&apos;s captions and turn them into
-                  study material.
-                </p>
-              )}
-              <Label htmlFor="yt-title">
-                Title{" "}
-                <span className="text-muted-foreground">
-                  (optional — defaults to the video title)
-                </span>
-              </Label>
-              <Input
-                id="yt-title"
-                placeholder="e.g. Operating Systems - Lecture 3"
-                value={ytTitle}
-                onChange={(e) => setYtTitle(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Only videos with captions or an auto-generated transcript can be
-                processed. If a video has no transcript, we&apos;ll let you know
-                instead of making one up.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="space-y-8">
+        {/* Hidden Global File Input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf,.docx,.pptx,.xlsx,.txt,.png,.jpg,.jpeg"
+          onChange={handleFileInputChange}
+          className="hidden"
+          aria-label="Upload study material file"
+        />
 
-      <div className="mt-6 flex justify-end">
-        <Button
-          onClick={handleContinue}
-          disabled={!canContinue}
-          className="gap-2"
-        >
-          {submitting ? (
-            <>
-              <Loader2 className="size-4 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            <>
-              Continue
-              <ArrowRight className="size-4" />
-            </>
-          )}
-        </Button>
+        {/* 1. Magnetic Drop Arena */}
+        {!selectedFile ? (
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            className={`relative group cursor-pointer flex flex-col items-center justify-center p-8 sm:p-14 rounded-3xl border-2 border-dashed transition-all duration-200 text-center ${
+              isDragging
+                ? "border-primary bg-primary/10 scale-[1.01] shadow-xl shadow-primary/15 ring-4 ring-primary/20"
+                : "border-border/80 bg-card/60 hover:border-primary/50 hover:bg-card/90 shadow-xs"
+            }`}
+          >
+            {/* Mascot in Drop Zone */}
+            <div className="mb-4 transition-transform group-hover:scale-110 duration-200">
+              <SpideyMascot mood={isDragging ? "cheering" : "idle"} size={64} interactive={false} />
+            </div>
+
+            <h2 className="text-xl font-bold tracking-tight text-foreground mb-1.5">
+              {isDragging ? "Release to drop your material!" : "Drop your study material here"}
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+              Supports <strong className="text-foreground">PDF</strong>, <strong className="text-foreground">DOCX</strong>, <strong className="text-foreground">PPTX</strong>, <strong className="text-foreground">TXT</strong>, and lecture images
+            </p>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-xl border-primary/30 text-primary hover:bg-primary/10 pointer-events-none"
+            >
+              <Upload className="size-4 mr-2" />
+              <span>Browse files on device</span>
+            </Button>
+          </div>
+        ) : (
+          /* File Selected Card */
+          <div className="flex items-center justify-between p-4 sm:p-5 rounded-2xl border border-primary/40 bg-primary/10 shadow-xs backdrop-blur-xs">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs">
+                {fileCategory === "pdf" ? (
+                  <FileText className="size-5" />
+                ) : fileCategory === "image" ? (
+                  <ImageIcon className="size-5" />
+                ) : (
+                  <File className="size-5" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-foreground truncate">{selectedFile.name}</span>
+                  <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider bg-primary/20 text-primary px-2 py-0.5 rounded-md">
+                    {fileCategory}
+                  </span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB · Ready to weave
+                </span>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={clearSelectedFile}
+              className="size-8 rounded-lg hover:bg-destructive/15 hover:text-destructive"
+              aria-label="Remove file"
+            >
+              <X className="size-4" />
+            </Button>
+          </div>
+        )}
+
+        {/* Divider */}
+        <div className="relative flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-border/80" />
+          </div>
+          <span className="relative bg-background px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            or paste your notes directly
+          </span>
+        </div>
+
+        {/* 2. Direct Note Pasting Surface */}
+        <div className="rounded-2xl border border-border/80 bg-card/60 p-5 sm:p-6 shadow-xs backdrop-blur-xs space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="session-title" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Session Title (Optional)
+            </Label>
+            <Input
+              id="session-title"
+              placeholder="e.g., Chapter 4: Photosynthesis & Cellular Respiration"
+              value={sessionTitle}
+              onChange={(e) => setSessionTitle(e.target.value)}
+              className="rounded-xl bg-background/80"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="session-notes" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Lecture Notes / Summary Text
+            </Label>
+            <Textarea
+              id="session-notes"
+              placeholder="Paste raw lecture text, key definitions, or textbook notes here..."
+              value={textNotes}
+              onChange={(e) => {
+                setTextNotes(e.target.value);
+                if (selectedFile) clearSelectedFile();
+              }}
+              rows={5}
+              className="rounded-xl bg-background/80 font-normal leading-relaxed resize-y"
+            />
+          </div>
+
+          {/* 3. YouTube Expander Pill */}
+          <div className="pt-2 border-t border-border/50">
+            {!showYoutube ? (
+              <button
+                type="button"
+                onClick={() => setShowYoutube(true)}
+                className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                <Video className="size-4 text-red-500" />
+                <span>Studying from a YouTube lecture? Click here to add video link</span>
+              </button>
+            ) : (
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Video className="size-4 text-red-500" />
+                    YouTube Lecture Video
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowYoutube(false);
+                      setYtUrl("");
+                    }}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <Input
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  value={ytUrl}
+                  onChange={(e) => setYtUrl(e.target.value)}
+                  className="rounded-xl bg-background/80"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <div className="pt-2">
+          <Button
+            type="button"
+            onClick={handleContinue}
+            disabled={!canSubmit}
+            size="lg"
+            className="w-full h-13 rounded-2xl text-base font-semibold shadow-md shadow-primary/20 hover:shadow-primary/30 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+          >
+            <span>Turn into Study Hub</span>
+            <ArrowRight className="size-4.5 ml-2" />
+          </Button>
+        </div>
       </div>
     </div>
   );

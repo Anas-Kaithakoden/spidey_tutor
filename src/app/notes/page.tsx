@@ -24,6 +24,8 @@ import {
   LanguageToggle,
   type StudyLanguage,
 } from "@/components/language-toggle";
+import { MaterialPicker } from "@/components/material-picker";
+import { ThinkingAnimation } from "@/components/thinking-animation";
 
 export default function Notes() {
   const router = useRouter();
@@ -35,7 +37,7 @@ export default function Notes() {
 
   useEffect(() => {
     if (!material) {
-      router.replace("/add");
+      setTimeout(() => setLoading(false), 0);
       return;
     }
     let cancelled = false;
@@ -90,9 +92,23 @@ export default function Notes() {
 
   if (!material) {
     return (
-      <div className="flex flex-col items-center justify-center py-24">
-        <Loader2 className="mb-4 size-6 animate-spin text-muted-foreground" />
-        <p className="text-muted-foreground">Redirecting...</p>
+      <div className="mx-auto max-w-3xl px-4 py-12">
+        <MaterialPicker
+          title="Choose a Study Set for Notes"
+          description="Select which lecture material you want to view or generate structured Cornell study notes for."
+        />
+      </div>
+    );
+  }
+
+  if (generating && !notes) {
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-16">
+        <ThinkingAnimation
+          variant="card"
+          text="Spidey is synthesizing Cornell study notes..."
+          subtext="Extracting core concepts, definitions, formula anchors, and summary takeaways..."
+        />
       </div>
     );
   }
@@ -143,12 +159,12 @@ export default function Notes() {
       ) : (
         <div className="space-y-6">
           {generating && (
-            <Card>
-              <CardContent className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" />
-                Regenerating notes...
-              </CardContent>
-            </Card>
+            <ThinkingAnimation
+              variant="card"
+              text="Spidey is re-weaving your study notes..."
+              subtext="Updating sections and concept highlights with your chosen model..."
+              className="mb-6"
+            />
           )}
 
           <Card>
