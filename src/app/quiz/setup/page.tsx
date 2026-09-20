@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { ArrowRight, Clock, Loader2 } from "lucide-react";
 import { createQuiz, getMaterial } from "@/lib/api";
 import { ModelSelect } from "@/components/model-select";
+import { MaterialPicker } from "@/components/material-picker";
 
 const difficulties = [
   { value: "easy", label: "Easy", desc: "Basic recall questions" },
@@ -83,6 +84,17 @@ export default function QuizSetup() {
     } finally {
       setGenerating(false);
     }
+  }
+
+  if (!material) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-12">
+        <MaterialPicker
+          title="Choose a Study Set for Your Quiz"
+          description="Select which of your uploaded materials you want to generate practice questions from."
+        />
+      </div>
+    );
   }
 
   return (

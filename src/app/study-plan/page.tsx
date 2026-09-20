@@ -12,6 +12,7 @@ import { Calendar, Clock, Loader2, Sparkles, BookOpen, RotateCcw, FileUp, X } fr
 import { useStudy } from "@/lib/context";
 import { generateStudyPlan, generateStudyPlanFromPdf, type StudyPlan } from "@/lib/api";
 import { ModelSelect } from "@/components/model-select";
+import { ThinkingAnimation } from "@/components/thinking-animation";
 
 export default function StudyPlanPage() {
   const { material, model } = useStudy();
@@ -172,6 +173,15 @@ export default function StudyPlanPage() {
           </div>
         </CardContent>
       </Card>
+
+      {loading && (
+        <ThinkingAnimation
+          variant="card"
+          text="Spidey is scheduling your study plan..."
+          subtext="Mapping syllabus modules across available study days and exam milestones..."
+          className="my-6"
+        />
+      )}
 
       {plan && (
         <div className="space-y-4">

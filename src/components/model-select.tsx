@@ -18,26 +18,23 @@ function providerBadge(provider: string): string {
 
 export function ModelSelect({ className }: { className?: string }) {
   const { model, setModel } = useStudy();
-  const [options, setOptions] = useState<ModelOption[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [options, setOptions] = useState<ModelOption[]>([model]);
 
   useEffect(() => {
+    let cancelled = false;
     getModels()
       .then((data) => {
+        if (cancelled) return;
         if (data.providers.length) {
           setOptions(data.providers);
-        } else {
-          setOptions([
-            { provider: "gemini", name: "gemini-2.5-flash", label: "Gemini" },
-          ]);
         }
       })
       .catch(() => {
-        setOptions([
-          { provider: "gemini", name: "gemini-2.5-flash", label: "Gemini" },
-        ]);
-      })
-      .finally(() => setLoading(false));
+        // keep current model as option
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -46,7 +43,6 @@ export function ModelSelect({ className }: { className?: string }) {
         AI Model
       </label>
       <select
-        disabled={loading}
         value={`${model.provider}:${model.name}`}
         onChange={(e) => {
           const opt = options.find(
@@ -56,13 +52,11 @@ export function ModelSelect({ className }: { className?: string }) {
         }}
         className="flex h-9 w-full rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
       >
-        {loading && <option>Loading models...</option>}
-        {!loading &&
-          options.map((opt) => (
-            <option key={`${opt.provider}:${opt.name}`} value={`${opt.provider}:${opt.name}`}>
-              {providerBadge(opt.provider)} — {opt.label}
-            </option>
-          ))}
+        {options.map((opt) => (
+          <option key={`${opt.provider}:${opt.name}`} value={`${opt.provider}:${opt.name}`}>
+            {providerBadge(opt.provider)} — {opt.label}
+          </option>
+        ))}
       </select>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStudy } from "@/lib/context";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { generateAudioSummary, type AudioSummaryOut } from "@/lib/api";
 import { AudioPlayer } from "@/components/audio-player";
 import { toast } from "sonner";
 
+import { MaterialPicker } from "@/components/material-picker";
+
 export default function Preview() {
   const router = useRouter();
   const { material, model } = useStudy();
@@ -19,15 +21,13 @@ export default function Preview() {
   const [language, setLanguage] = useState<"en" | "ml">("en");
   const [speed, setSpeed] = useState(1);
 
-  useEffect(() => {
-    if (!material) router.replace("/add");
-  }, [material, router]);
-
   if (!material) {
     return (
-      <div className="flex flex-col items-center justify-center py-24">
-        <Loader2 className="mb-4 size-6 animate-spin text-muted-foreground" />
-        <p className="text-muted-foreground">Redirecting...</p>
+      <div className="mx-auto max-w-3xl px-4 py-12">
+        <MaterialPicker
+          title="Choose a Study Set to Preview"
+          description="Select which lecture slides or notes you want to preview and generate audio summaries for."
+        />
       </div>
     );
   }
